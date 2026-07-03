@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarCheck, MoreVertical, UserCheck, UserMinus } from "lucide-react";
+import { CalendarCheck, Link2, MoreVertical, UserCheck, UserMinus } from "lucide-react";
 
 import {
   AlertDialog,
@@ -25,6 +25,7 @@ import {
 import { useActualizarEstadoMesa } from "@/features/mesas/hooks/use-actualizar-estado-mesa";
 import type { Mesa } from "@/features/mesas/types/mesa.types";
 import { estadoMesaClass, estadoMesaLabel } from "@/features/mesas/utils/estado-mesa";
+import { formatGrupoMesas } from "@/features/mesas/utils/mesa-helpers";
 import { cn } from "@/lib/utils";
 
 interface MesaRecepcionCardProps {
@@ -66,6 +67,8 @@ export function MesaRecepcionCard({ mesa }: MesaRecepcionCardProps) {
   function confirmarLiberarMesa() {
     actualizarEstado({ id: mesa.id, estado: "LIBRE" });
   }
+
+  const grupoLabel = formatGrupoMesas(mesa);
 
   return (
     <>
@@ -111,6 +114,12 @@ export function MesaRecepcionCard({ mesa }: MesaRecepcionCardProps) {
               {estadoMesaLabel[mesa.estado]}
             </Badge>
             {mesa.capacidad != null && <Badge variant="secondary">{mesa.capacidad} pax</Badge>}
+            {grupoLabel && (
+              <Badge variant="default" className="gap-1">
+                <Link2 className="h-3 w-3" />
+                {grupoLabel}
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>

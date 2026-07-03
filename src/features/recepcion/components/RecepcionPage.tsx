@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MesasGridSkeleton } from "@/features/mesas/components/MesasGridSkeleton";
-import { type FiltroEstadoMesa, useMesas } from "@/features/mesas/hooks/use-mesas";
+import { type FiltroEstadoMesa } from "@/features/mesas/hooks/use-mesas";
+import { useMesasPiso } from "@/features/mesas/hooks/use-mesas-piso";
 import { estadoMesaLabel } from "@/features/mesas/utils/estado-mesa";
 import { MesaRecepcionCard } from "@/features/recepcion/components/MesaRecepcionCard";
 import { RecepcionStats } from "@/features/recepcion/components/RecepcionStats";
@@ -27,8 +28,12 @@ const FILTROS: { value: FiltroEstadoMesa; label: string }[] = [
 export function RecepcionPage() {
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoMesa>("todas");
 
-  const { mesas, isLoading, isError, refetch } = useMesas({ filtroEstado });
-  const { mesas: todasLasMesas, isLoading: cargandoStats } = useMesas();
+  const { mesas: mesasPiso, isLoading, isError, refetch } = useMesasPiso();
+
+  const mesasFiltradas = useMemo(() => {
+    if (filtroEstado === "todas") return mesasPiso;
+    return mesasPiso.filter((m) => m.estado === filtroEstado);
+  }, [mesasPiso, filtroEstado]);
 
   return (
     <div className="space-y-4">
@@ -36,14 +41,14 @@ export function RecepcionPage() {
         Gestiona reservas y asignación de mesas para la llegada de clientes.
       </p>
 
-      {cargandoStats ? (
+      {isLoading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
       ) : (
-        <RecepcionStats mesas={todasLasMesas} />
+        <RecepcionStats mesas={mesasPiso} />
       )}
 
       <Select value={filtroEstado} onValueChange={(v) => setFiltroEstado(v as FiltroEstadoMesa)}>
@@ -70,15 +75,15 @@ export function RecepcionPage() {
         </div>
       )}
 
-      {!isLoading && !isError && mesas.length === 0 && (
+      {!isLoading && !isError && mesasFiltradas.length === 0 && (
         <div className="rounded-xl border border-dashed border-border/60 p-8 text-center text-muted-foreground">
           No hay mesas con este filtro.
         </div>
       )}
 
-      {!isLoading && !isError && mesas.length > 0 && (
+      {!isLoading && !isError && mesasFiltradas.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {mesas.map((mesa) => (
+          {mesasFiltradas.map((mesa) => (
             <MesaRecepcionCard key={mesa.id} mesa={mesa} />
           ))}
         </div>

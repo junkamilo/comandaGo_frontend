@@ -7,15 +7,15 @@ interface PosToolbarProps {
 }
 
 export function PosToolbar({ itemsCount }: PosToolbarProps) {
-  if (itemsCount === 0) return null;
-
   return (
-    <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border/60 px-4 py-2 md:px-6">
+    <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border/60 px-3 py-2 md:px-6">
       <Badge variant="outline" className="hidden gap-1 sm:flex">
         <ChefHat className="h-3.5 w-3.5" />
         Modo mesero
       </Badge>
-      <Badge className="bg-primary text-primary-foreground">{itemsCount} ítems</Badge>
+      {itemsCount > 0 && (
+        <Badge className="bg-primary text-primary-foreground">{itemsCount} ítems</Badge>
+      )}
     </div>
   );
 }

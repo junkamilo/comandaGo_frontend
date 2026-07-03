@@ -10,6 +10,24 @@ export interface Mesa {
   qrToken: string;
   estado: EstadoMesa;
   activo: boolean;
+  grupoId: string | null;
+  mesasDelGrupo?: string[];
+}
+
+export interface CrearMesaRequest {
+  numero: string;
+  nombre?: string;
+  capacidad?: number;
+  qrToken?: string;
+  estado?: EstadoMesa;
+}
+
+export interface ActualizarMesaRequest {
+  numero?: string;
+  nombre?: string;
+  capacidad?: number;
+  qrToken?: string;
+  estado?: EstadoMesa;
 }
 
 export interface ListarMesasParams {
@@ -20,3 +38,7 @@ export interface ListarMesasParams {
 }
 
 export type MesasPage = PageResponse<Mesa>;
+
+export interface AgruparMesasRequest {
+  mesaIds: number[];
+}

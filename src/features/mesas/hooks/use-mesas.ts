@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { listarMesas } from "@/features/mesas/api/mesas.api";
+import { MESAS_QUERY_KEYS } from "@/features/mesas/hooks/mesas-query-keys";
 import type { EstadoMesa, ListarMesasParams } from "@/features/mesas/types/mesa.types";
 
 export type FiltroEstadoMesa = "todas" | EstadoMesa;
@@ -33,7 +34,7 @@ export function useMesas({
   };
 
   const query = useQuery({
-    queryKey: ["mesas", params],
+    queryKey: [...MESAS_QUERY_KEYS.list, params],
     queryFn: () => listarMesas(params),
   });
 

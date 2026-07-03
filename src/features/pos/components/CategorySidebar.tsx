@@ -1,13 +1,14 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CATEGORIAS } from "@/features/pos/data/mock-data";
+import type { CategoriaPos } from "@/features/pos/types/pos.types";
 import { cn } from "@/lib/utils";
 
 interface CategorySidebarProps {
-  categoriaActiva: string;
-  onSelect: (id: string) => void;
+  categorias: CategoriaPos[];
+  categoriaActiva: number | null;
+  onSelect: (id: number) => void;
 }
 
-export function CategorySidebar({ categoriaActiva, onSelect }: CategorySidebarProps) {
+export function CategorySidebar({ categorias, categoriaActiva, onSelect }: CategorySidebarProps) {
   return (
     <aside className="hidden w-52 shrink-0 flex-col border-r border-border/60 bg-card/30 md:flex lg:w-56">
       <div className="p-3">
@@ -16,24 +17,27 @@ export function CategorySidebar({ categoriaActiva, onSelect }: CategorySidebarPr
         </p>
       </div>
       <ScrollArea className="flex-1 px-2 pb-4">
-        <nav className="flex flex-col gap-1">
-          {CATEGORIAS.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => onSelect(cat.id)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
-                categoriaActiva === cat.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              )}
-            >
-              <span className="text-lg">{cat.icono}</span>
-              {cat.nombre}
-            </button>
-          ))}
-        </nav>
+        {categorias.length === 0 ? (
+          <p className="px-2 py-4 text-sm text-muted-foreground">Sin categorías</p>
+        ) : (
+          <nav className="flex flex-col gap-1">
+            {categorias.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => onSelect(cat.id)}
+                className={cn(
+                  "rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                  categoriaActiva === cat.id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {cat.nombre}
+              </button>
+            ))}
+          </nav>
+        )}
       </ScrollArea>
     </aside>
   );
