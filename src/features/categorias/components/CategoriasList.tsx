@@ -1,7 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, FolderTree, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
 import {
@@ -14,21 +30,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  CategoriaSortableItem,
+  CategoriaStaticItem,
+} from "@/features/categorias/components/CategoriaSortableItem";
 import { useCategoriaActivo } from "@/features/categorias/hooks/use-categoria-activo";
+import { useReordenarCategorias } from "@/features/categorias/hooks/use-reordenar-categorias";
 import type { Categoria } from "@/features/categorias/types/categoria.types";
-import { buildCategoriasJerarquia } from "@/features/categorias/utils/categoria-helpers";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import {
+  getCategoriasPrincipales,
+  getSubcategorias,
+} from "@/features/categorias/utils/categoria-helpers";
+
+const PADRES_CONTAINER_ID = "padres";
 
 interface CategoriasListProps {
   categorias: Categoria[];
@@ -36,13 +50,23 @@ interface CategoriasListProps {
   onCrear: () => void;
 }
 
+function hijasContainerId(padreId: number) {
+  return `hijas-${padreId}`;
+}
+
 export function CategoriasList({ categorias, onEditar, onCrear }: CategoriasListProps) {
   const [desactivarTarget, setDesactivarTarget] = useState<Categoria | null>(null);
   const { desactivarCategoria, toggleActivo, isDesactivando } = useCategoriaActivo(() =>
     setDesactivarTarget(null),
   );
+  const { reordenarCategoriasAsync, isReordenando } = useReordenarCategorias();
 
-  const jerarquia = buildCategoriasJerarquia(categorias);
+  const padres = useMemo(() => getCategoriasPrincipales(categorias), [categorias]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   function confirmarDesactivar() {
     if (!desactivarTarget) return;
@@ -60,11 +84,48 @@ export function CategoriasList({ categorias, onEditar, onCrear }: CategoriasList
     toggleActivo({ id: categoria.id, activo: true });
   }
 
-  if (jerarquia.length === 0) {
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || isReordenando) return;
+
+    const activeContainer = active.data.current?.sortable?.containerId as string | undefined;
+    const overContainer = over.data.current?.sortable?.containerId as string | undefined;
+    if (!activeContainer || activeContainer !== overContainer) return;
+
+    if (activeContainer === PADRES_CONTAINER_ID) {
+      const activas = padres.filter((c) => c.activo);
+      const ids = activas.map((c) => c.id);
+      const oldIndex = ids.indexOf(Number(active.id));
+      const newIndex = ids.indexOf(Number(over.id));
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+      await reordenarCategoriasAsync({
+        ids: arrayMove(ids, oldIndex, newIndex),
+        categoriaPadreId: null,
+      });
+      return;
+    }
+
+    if (activeContainer.startsWith("hijas-")) {
+      const padreId = Number(activeContainer.replace("hijas-", ""));
+      const hijas = getSubcategorias(categorias, padreId).filter((c) => c.activo);
+      const ids = hijas.map((c) => c.id);
+      const oldIndex = ids.indexOf(Number(active.id));
+      const newIndex = ids.indexOf(Number(over.id));
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+      await reordenarCategoriasAsync({
+        ids: arrayMove(ids, oldIndex, newIndex),
+        categoriaPadreId: padreId,
+      });
+    }
+  }
+
+  if (padres.length === 0) {
     return (
       <EmptyState
         centered
-        icon={FolderTree}
+        icon={Plus}
         title="No hay categorías aún"
         description="Organiza tu carta creando categorías principales y subcategorías para el menú del POS."
         action={{
@@ -76,84 +137,80 @@ export function CategoriasList({ categorias, onEditar, onCrear }: CategoriasList
     );
   }
 
+  const padresActivosIds = padres.filter((c) => c.activo).map((c) => c.id);
+
   return (
     <>
-      <div className="space-y-3">
-        {jerarquia.map(({ categoria, isChild }) => (
-          <Card
-            key={categoria.id}
-            className={cn(
-              "border-border/60 bg-card/80",
-              isChild && "ml-4 border-l-2 border-l-primary/30 sm:ml-8",
-            )}
-          >
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <FolderTree className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold">{categoria.nombre}</p>
-                  {categoria.descripcion && (
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {categoria.descripcion}
-                    </p>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext
+          id={PADRES_CONTAINER_ID}
+          items={padresActivosIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-3">
+            {padres.map((padre) => {
+              const hijas = getSubcategorias(categorias, padre.id);
+              const hijasActivasIds = hijas.filter((c) => c.activo).map((c) => c.id);
+
+              return (
+                <div key={padre.id} className="space-y-3">
+                  {padre.activo ? (
+                    <CategoriaSortableItem
+                      categoria={padre}
+                      isChild={false}
+                      sortable
+                      onEditar={onEditar}
+                      onDesactivar={setDesactivarTarget}
+                      onActivar={activarCategoria}
+                    />
+                  ) : (
+                    <CategoriaStaticItem
+                      categoria={padre}
+                      isChild={false}
+                      onEditar={onEditar}
+                      onDesactivar={setDesactivarTarget}
+                      onActivar={activarCategoria}
+                    />
                   )}
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>Orden: {categoria.orden}</span>
-                    {categoria.categoriaPadreNombre && (
-                      <span>· Subcategoría de {categoria.categoriaPadreNombre}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between gap-2 sm:justify-end">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={categoria.activo ? "default" : "secondary"}>
-                    {categoria.activo ? "Activa" : "Inactiva"}
-                  </Badge>
+                  {hijas.length > 0 && (
+                    <SortableContext
+                      id={hijasContainerId(padre.id)}
+                      items={hijasActivasIds}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
+                        {hijas.map((hija) =>
+                          hija.activo ? (
+                            <CategoriaSortableItem
+                              key={hija.id}
+                              categoria={hija}
+                              isChild
+                              sortable
+                              onEditar={onEditar}
+                              onDesactivar={setDesactivarTarget}
+                              onActivar={activarCategoria}
+                            />
+                          ) : (
+                            <CategoriaStaticItem
+                              key={hija.id}
+                              categoria={hija}
+                              isChild
+                              onEditar={onEditar}
+                              onDesactivar={setDesactivarTarget}
+                              onActivar={activarCategoria}
+                            />
+                          ),
+                        )}
+                      </div>
+                    </SortableContext>
+                  )}
                 </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">Acciones</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => onEditar(categoria)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    {categoria.activo ? (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setDesactivarTarget(categoria)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Desactivar
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => activarCategoria(categoria)}>
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Activar
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <AlertDialog
         open={desactivarTarget !== null}

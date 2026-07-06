@@ -1,5 +1,22 @@
 import type { Categoria } from "@/features/categorias/types/categoria.types";
 
+function sortByOrden(a: Categoria, b: Categoria) {
+  return a.orden - b.orden || a.id - b.id;
+}
+
+export function getCategoriasPrincipales(
+  categorias: Categoria[],
+  excludeId?: number,
+): Categoria[] {
+  return categorias
+    .filter((c) => c.categoriaPadreId === null && c.id !== excludeId)
+    .sort(sortByOrden);
+}
+
+export function getSubcategorias(categorias: Categoria[], padreId: number): Categoria[] {
+  return categorias.filter((c) => c.categoriaPadreId === padreId).sort(sortByOrden);
+}
+
 export function getCategoriasPrincipalesActivas(
   categorias: Categoria[],
   excludeId?: number,

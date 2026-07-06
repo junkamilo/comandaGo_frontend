@@ -9,4 +9,6 @@ export interface CarritoItem {
 export interface CategoriaPos {
   id: number;
   nombre: string;
+  orden: number;
+  ordenPadre: number;
 }

@@ -16,6 +16,7 @@ export function useCategoriaActivo(onSuccess?: () => void) {
     mutationFn: (id: number) => eliminarCategoria(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categorias"] });
+      queryClient.invalidateQueries({ queryKey: ["categorias", "menu"] });
       toast.success("Categoría desactivada");
       onSuccess?.();
     },
@@ -31,6 +32,7 @@ export function useCategoriaActivo(onSuccess?: () => void) {
       actualizarActivoCategoria(id, activo),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["categorias"] });
+      queryClient.invalidateQueries({ queryKey: ["categorias", "menu"] });
       toast.success(data.activo ? "Categoría activada" : "Categoría desactivada");
       onSuccess?.();
     },

@@ -1,12 +1,5 @@
 import { z } from "zod";
 
-const imagenUrlSchema = z
-  .string()
-  .max(255, "La URL de imagen no puede superar 255 caracteres")
-  .url("La URL de imagen no es válida")
-  .optional()
-  .or(z.literal(""));
-
 const descripcionSchema = z
   .string()
   .max(2000, "La descripción no puede superar 2000 caracteres")
@@ -38,7 +31,6 @@ const baseProductoFields = {
   precio: precioSchema,
   esPromocion: z.boolean(),
   precioPromocion: precioPromocionSchema,
-  imagenUrl: imagenUrlSchema,
   tiempoPreparacionMin: z.coerce
     .number()
     .int()

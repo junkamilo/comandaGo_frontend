@@ -14,7 +14,6 @@ export interface CrearCategoriaRequest {
   nombre: string;
   descripcion?: string;
   imagenUrl?: string;
-  orden: number;
   categoriaPadreId?: number;
 }
 
@@ -22,6 +21,5 @@ export interface ActualizarCategoriaRequest {
   nombre?: string;
   descripcion?: string;
   imagenUrl?: string;
-  orden?: number;
   categoriaPadreId?: number;
 }

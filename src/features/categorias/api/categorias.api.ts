@@ -13,6 +13,14 @@ export async function listarTodasCategorias(): Promise<Categoria[]> {
   return response.data;
 }
 
+export async function listarMenuCategorias(): Promise<Categoria[]> {
+  const response = await apiClient.get<Categoria[]>("/categorias/menu");
+  if (!response.data) {
+    throw new Error("Respuesta de menú sin datos");
+  }
+  return response.data;
+}
+
 export async function crearCategoria(body: CrearCategoriaRequest): Promise<Categoria> {
   const response = await apiClient.post<Categoria>("/categorias", body);
   if (!response.data) {
@@ -42,4 +50,11 @@ export async function actualizarActivoCategoria(id: number, activo: boolean): Pr
     throw new Error("Respuesta de activo sin datos");
   }
   return response.data;
+}
+
+export async function reordenarCategorias(body: {
+  ids: number[];
+  categoriaPadreId?: number | null;
+}): Promise<void> {
+  await apiClient.put("/categorias/reordenar", body);
 }

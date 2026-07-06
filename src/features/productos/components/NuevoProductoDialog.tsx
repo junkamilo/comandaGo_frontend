@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
+import { ImageUploadButton } from "@/components/image-upload-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -34,6 +34,9 @@ import {
 } from "@/features/productos/schemas/producto.schemas";
 import { getCategoriasHoja } from "@/features/productos/utils/producto-helpers";
 import { applyFieldErrors } from "@/features/personal/utils/apply-field-errors";
+import { useUploadImagenProducto } from "@/features/storage/hooks/use-upload-imagen";
+
+import { Button } from "@/components/ui/button";
 
 const inputClassName = "h-11";
 
@@ -49,7 +52,6 @@ const defaultValues: CrearProductoFormValues = {
   precio: 0,
   esPromocion: false,
   precioPromocion: undefined,
-  imagenUrl: "",
   tiempoPreparacionMin: undefined,
   orden: 0,
 };
@@ -57,6 +59,8 @@ const defaultValues: CrearProductoFormValues = {
 export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogProps) {
   const { categorias } = useCategorias();
   const hojas = getCategoriasHoja(categorias);
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+  const { subirImagen, isUploading } = useUploadImagenProducto();
 
   const form = useForm<CrearProductoFormValues>({
     resolver: zodResolver(crearProductoSchema),
@@ -66,15 +70,18 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
   const esPromocion = form.watch("esPromocion");
 
   const {
-    crearProducto,
+    crearProductoAsync,
     isPending,
     fieldErrors,
     reset: resetMutation,
   } = useCrearProducto(() => {
     onOpenChange(false);
     form.reset(defaultValues);
+    setImagenUrl(null);
     resetMutation();
   });
+
+  const nombre = form.watch("nombre");
 
   useEffect(() => {
     if (!fieldErrors?.length) return;
@@ -85,7 +92,6 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
       "precio",
       "esPromocion",
       "precioPromocion",
-      "imagenUrl",
       "tiempoPreparacionMin",
       "orden",
     ]);
@@ -94,6 +100,7 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
   useEffect(() => {
     if (!open) {
       form.reset(defaultValues);
+      setImagenUrl(null);
       resetMutation();
     }
   }, [open, form, resetMutation]);
@@ -104,10 +111,10 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
     }
   }, [esPromocion, form]);
 
-  function onSubmit(values: CrearProductoFormValues) {
+  async function onSubmit(values: CrearProductoFormValues) {
     resetMutation();
     form.clearErrors();
-    crearProducto(values);
+    await crearProductoAsync({ values, imagenUrl });
   }
 
   return (
@@ -176,7 +183,13 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
                 <FormItem>
                   <FormLabel>Precio</FormLabel>
                   <FormControl>
-                    <Input className={inputClassName} type="number" min={0} step="0.01" {...field} />
+                    <Input
+                      className={inputClassName}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -224,23 +237,19 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
               />
             )}
 
-            <FormField
-              control={form.control}
-              name="imagenUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de imagen (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      className={inputClassName}
-                      type="url"
-                      placeholder="https://..."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ImageUploadButton
+              value={imagenUrl}
+              previewNombre={nombre.trim() || "Producto"}
+              uploading={isUploading}
+              disabled={isPending}
+              onUpload={async (file) => {
+                const url = await subirImagen(file);
+                setImagenUrl(url);
+                return url;
+              }}
+              onRemove={async () => {
+                setImagenUrl(null);
+              }}
             />
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -291,7 +300,7 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
               </Button>
               <Button
                 type="submit"
-                disabled={isPending || hojas.length === 0}
+                disabled={isPending || isUploading || hojas.length === 0}
                 className="h-11 w-full gap-2 sm:w-auto"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}

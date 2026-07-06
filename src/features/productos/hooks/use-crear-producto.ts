@@ -7,7 +7,12 @@ import { crearProducto } from "@/features/productos/api/productos.api";
 import type { CrearProductoFormValues } from "@/features/productos/schemas/producto.schemas";
 import { ApiError } from "@/lib/api-error";
 
-function toRequest(values: CrearProductoFormValues) {
+export interface CrearProductoPayload {
+  values: CrearProductoFormValues;
+  imagenUrl?: string | null;
+}
+
+function toRequest({ values, imagenUrl }: CrearProductoPayload) {
   return {
     categoriaId: values.categoriaId,
     nombre: values.nombre.trim(),
@@ -15,7 +20,7 @@ function toRequest(values: CrearProductoFormValues) {
     precio: values.precio,
     esPromocion: values.esPromocion,
     precioPromocion: values.esPromocion ? values.precioPromocion : undefined,
-    imagenUrl: values.imagenUrl?.trim() || undefined,
+    imagenUrl: imagenUrl ?? undefined,
     tiempoPreparacionMin: values.tiempoPreparacionMin,
     orden: values.orden,
   };
@@ -25,7 +30,7 @@ export function useCrearProducto(onSuccess?: () => void) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (values: CrearProductoFormValues) => crearProducto(toRequest(values)),
+    mutationFn: (payload: CrearProductoPayload) => crearProducto(toRequest(payload)),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["productos"] });
       toast.success("Producto creado", { description: data.nombre });
@@ -40,6 +45,7 @@ export function useCrearProducto(onSuccess?: () => void) {
 
   return {
     crearProducto: mutation.mutate,
+    crearProductoAsync: mutation.mutateAsync,
     isPending: mutation.isPending,
     fieldErrors: mutation.error instanceof ApiError ? mutation.error.fieldErrors : undefined,
     reset: mutation.reset,

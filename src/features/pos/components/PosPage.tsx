@@ -15,7 +15,7 @@ import { PosToolbar } from "@/features/pos/components/PosToolbar";
 import { ProductGrid } from "@/features/pos/components/ProductGrid";
 import { usePosCart } from "@/features/pos/hooks/use-pos-cart";
 import { flattenCategoriasPos } from "@/features/pos/utils/categoria-helpers";
-import { useCategorias } from "@/features/categorias/hooks/use-categorias";
+import { useCategoriasMenu } from "@/features/categorias/hooks/use-categorias-menu";
 import { useMesasPiso } from "@/features/mesas/hooks/use-mesas-piso";
 import { useProductos } from "@/features/productos/hooks/use-productos";
 
@@ -34,7 +34,7 @@ export function PosPage() {
     isLoading: loadingCategorias,
     isError: errorCategorias,
     refetch: refetchCategorias,
-  } = useCategorias();
+  } = useCategoriasMenu();
 
   const {
     mesas,

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
+import { ImageUploadButton } from "@/components/image-upload-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -37,6 +37,9 @@ import {
 import type { Producto } from "@/features/productos/types/producto.types";
 import { getCategoriasHoja } from "@/features/productos/utils/producto-helpers";
 import { applyFieldErrors } from "@/features/personal/utils/apply-field-errors";
+import { useUploadImagenProducto } from "@/features/storage/hooks/use-upload-imagen";
+
+import { Button } from "@/components/ui/button";
 
 const inputClassName = "h-11";
 
@@ -46,14 +49,13 @@ interface EditarProductoDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditarProductoDialog({
-  producto,
-  open,
-  onOpenChange,
-}: EditarProductoDialogProps) {
+export function EditarProductoDialog({ producto, open, onOpenChange }: EditarProductoDialogProps) {
   const { categorias } = useCategorias();
   const hojas = getCategoriasHoja(categorias);
   const inactivo = producto ? !producto.activo : false;
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+  const [imagenEliminada, setImagenEliminada] = useState(false);
+  const { subirImagen, isUploading } = useUploadImagenProducto();
 
   const form = useForm<EditarProductoFormValues>({
     resolver: zodResolver(editarProductoSchema),
@@ -64,7 +66,6 @@ export function EditarProductoDialog({
       precio: 0,
       esPromocion: false,
       precioPromocion: undefined,
-      imagenUrl: "",
       tiempoPreparacionMin: undefined,
       orden: 0,
       disponible: true,
@@ -72,9 +73,10 @@ export function EditarProductoDialog({
   });
 
   const esPromocion = form.watch("esPromocion");
+  const nombre = form.watch("nombre");
 
   const {
-    actualizarProducto,
+    actualizarProductoAsync,
     isPending,
     fieldErrors,
     reset: resetMutation,
@@ -85,6 +87,8 @@ export function EditarProductoDialog({
 
   useEffect(() => {
     if (!producto || !open) return;
+    setImagenUrl(producto.imagenUrl);
+    setImagenEliminada(false);
     form.reset({
       categoriaId: producto.categoriaId,
       nombre: producto.nombre,
@@ -92,7 +96,6 @@ export function EditarProductoDialog({
       precio: producto.precio,
       esPromocion: producto.esPromocion,
       precioPromocion: producto.precioPromocion ?? undefined,
-      imagenUrl: producto.imagenUrl ?? "",
       tiempoPreparacionMin: producto.tiempoPreparacionMin ?? undefined,
       orden: producto.orden,
       disponible: producto.disponible,
@@ -108,7 +111,6 @@ export function EditarProductoDialog({
       "precio",
       "esPromocion",
       "precioPromocion",
-      "imagenUrl",
       "tiempoPreparacionMin",
       "orden",
       "disponible",
@@ -121,11 +123,16 @@ export function EditarProductoDialog({
     }
   }, [esPromocion, form]);
 
-  function onSubmit(values: EditarProductoFormValues) {
+  async function onSubmit(values: EditarProductoFormValues) {
     if (!producto) return;
     resetMutation();
     form.clearErrors();
-    actualizarProducto({ id: producto.id, values });
+    await actualizarProductoAsync({
+      id: producto.id,
+      values,
+      imagenUrl,
+      imagenEliminada,
+    });
   }
 
   if (!producto) return null;
@@ -264,18 +271,21 @@ export function EditarProductoDialog({
                 />
               )}
 
-              <FormField
-                control={form.control}
-                name="imagenUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL de imagen (opcional)</FormLabel>
-                    <FormControl>
-                      <Input className={inputClassName} type="url" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <ImageUploadButton
+                value={imagenEliminada ? null : imagenUrl}
+                previewNombre={nombre.trim() || producto.nombre}
+                uploading={isUploading}
+                disabled={isPending}
+                onUpload={async (file) => {
+                  const url = await subirImagen(file);
+                  setImagenUrl(url);
+                  setImagenEliminada(false);
+                  return url;
+                }}
+                onRemove={async () => {
+                  setImagenUrl(null);
+                  setImagenEliminada(true);
+                }}
               />
 
               <div className="grid gap-5 sm:grid-cols-2">
@@ -341,7 +351,11 @@ export function EditarProductoDialog({
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isPending} className="h-11 w-full gap-2 sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={isPending || isUploading}
+                  className="h-11 w-full gap-2 sm:w-auto"
+                >
                   {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   Guardar cambios
                 </Button>

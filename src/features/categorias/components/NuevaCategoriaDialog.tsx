@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
+import { ImageUploadButton } from "@/components/image-upload-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +33,7 @@ import {
   type CrearCategoriaFormValues,
 } from "@/features/categorias/schemas/categoria.schemas";
 import { applyFieldErrors } from "@/features/personal/utils/apply-field-errors";
+import { useUploadImagenCategoria } from "@/features/storage/hooks/use-upload-imagen";
 
 const inputClassName = "h-11";
 
@@ -43,27 +45,30 @@ interface NuevaCategoriaDialogProps {
 const defaultValues: CrearCategoriaFormValues = {
   nombre: "",
   descripcion: "",
-  imagenUrl: "",
-  orden: 0,
   categoriaPadreId: "none",
 };
 
 export function NuevaCategoriaDialog({ open, onOpenChange }: NuevaCategoriaDialogProps) {
   const { categorias } = useCategorias();
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+  const { subirImagen, isUploading } = useUploadImagenCategoria();
 
   const form = useForm<CrearCategoriaFormValues>({
     resolver: zodResolver(crearCategoriaSchema),
     defaultValues,
   });
 
+  const nombre = form.watch("nombre");
+
   const {
-    crearCategoria,
+    crearCategoriaAsync,
     isPending,
     fieldErrors,
     reset: resetMutation,
   } = useCrearCategoria(() => {
     onOpenChange(false);
     form.reset(defaultValues);
+    setImagenUrl(null);
     resetMutation();
   });
 
@@ -72,8 +77,6 @@ export function NuevaCategoriaDialog({ open, onOpenChange }: NuevaCategoriaDialo
     applyFieldErrors(fieldErrors, form.setError, [
       "nombre",
       "descripcion",
-      "imagenUrl",
-      "orden",
       "categoriaPadreId",
     ]);
   }, [fieldErrors, form]);
@@ -81,14 +84,15 @@ export function NuevaCategoriaDialog({ open, onOpenChange }: NuevaCategoriaDialo
   useEffect(() => {
     if (!open) {
       form.reset(defaultValues);
+      setImagenUrl(null);
       resetMutation();
     }
   }, [open, form, resetMutation]);
 
-  function onSubmit(values: CrearCategoriaFormValues) {
+  async function onSubmit(values: CrearCategoriaFormValues) {
     resetMutation();
     form.clearErrors();
-    crearCategoria(values);
+    await crearCategoriaAsync({ values, imagenUrl });
   }
 
   return (
@@ -131,37 +135,19 @@ export function NuevaCategoriaDialog({ open, onOpenChange }: NuevaCategoriaDialo
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="imagenUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de imagen (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      className={inputClassName}
-                      type="url"
-                      placeholder="https://..."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="orden"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Orden</FormLabel>
-                  <FormControl>
-                    <Input className={inputClassName} type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ImageUploadButton
+              value={imagenUrl}
+              previewNombre={nombre.trim() || "Categoría"}
+              uploading={isUploading}
+              disabled={isPending}
+              onUpload={async (file) => {
+                const url = await subirImagen(file);
+                setImagenUrl(url);
+                return url;
+              }}
+              onRemove={async () => {
+                setImagenUrl(null);
+              }}
             />
 
             <FormField
@@ -191,7 +177,11 @@ export function NuevaCategoriaDialog({ open, onOpenChange }: NuevaCategoriaDialo
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending} className="h-11 w-full gap-2 sm:w-auto">
+              <Button
+                type="submit"
+                disabled={isPending || isUploading}
+                className="h-11 w-full gap-2 sm:w-auto"
+              >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Crear categoría
               </Button>

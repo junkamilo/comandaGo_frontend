@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { ImageUploadButton } from "@/components/image-upload-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,6 +39,7 @@ import {
 import type { Categoria } from "@/features/categorias/types/categoria.types";
 import { tieneHijasActivas } from "@/features/categorias/utils/categoria-helpers";
 import { applyFieldErrors } from "@/features/personal/utils/apply-field-errors";
+import { useUploadImagenCategoria } from "@/features/storage/hooks/use-upload-imagen";
 
 const inputClassName = "h-11";
 
@@ -54,20 +56,23 @@ export function EditarCategoriaDialog({
 }: EditarCategoriaDialogProps) {
   const { categorias } = useCategorias();
   const [activo, setActivo] = useState(true);
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+  const [imagenEliminada, setImagenEliminada] = useState(false);
+  const { subirImagen, isUploading } = useUploadImagenCategoria();
 
   const form = useForm<EditarCategoriaFormValues>({
     resolver: zodResolver(editarCategoriaSchema),
     defaultValues: {
       nombre: "",
       descripcion: "",
-      imagenUrl: "",
-      orden: 0,
       categoriaPadreId: "none",
     },
   });
 
+  const nombre = form.watch("nombre");
+
   const {
-    actualizarCategoria,
+    actualizarCategoriaAsync,
     isPending,
     fieldErrors,
     reset: resetMutation,
@@ -84,11 +89,11 @@ export function EditarCategoriaDialog({
   useEffect(() => {
     if (!categoria || !open) return;
     setActivo(categoria.activo);
+    setImagenUrl(categoria.imagenUrl);
+    setImagenEliminada(false);
     form.reset({
       nombre: categoria.nombre,
       descripcion: categoria.descripcion ?? "",
-      imagenUrl: categoria.imagenUrl ?? "",
-      orden: categoria.orden,
       categoriaPadreId: categoria.categoriaPadreId ?? "none",
     });
   }, [categoria, open, form]);
@@ -98,17 +103,20 @@ export function EditarCategoriaDialog({
     applyFieldErrors(fieldErrors, form.setError, [
       "nombre",
       "descripcion",
-      "imagenUrl",
-      "orden",
       "categoriaPadreId",
     ]);
   }, [fieldErrors, form]);
 
-  function onSubmit(values: EditarCategoriaFormValues) {
+  async function onSubmit(values: EditarCategoriaFormValues) {
     if (!categoria) return;
     resetMutation();
     form.clearErrors();
-    actualizarCategoria({ id: categoria.id, values });
+    await actualizarCategoriaAsync({
+      id: categoria.id,
+      values,
+      imagenUrl,
+      imagenEliminada,
+    });
   }
 
   function handleActivoChange(checked: boolean) {
@@ -174,32 +182,21 @@ export function EditarCategoriaDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="imagenUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de imagen (opcional)</FormLabel>
-                  <FormControl>
-                    <Input className={inputClassName} type="url" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="orden"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Orden</FormLabel>
-                  <FormControl>
-                    <Input className={inputClassName} type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ImageUploadButton
+              value={imagenEliminada ? null : imagenUrl}
+              previewNombre={nombre.trim() || categoria.nombre}
+              uploading={isUploading}
+              disabled={isPending}
+              onUpload={async (file) => {
+                const url = await subirImagen(file);
+                setImagenUrl(url);
+                setImagenEliminada(false);
+                return url;
+              }}
+              onRemove={async () => {
+                setImagenUrl(null);
+                setImagenEliminada(true);
+              }}
             />
 
             {!tieneHijas && (
@@ -250,7 +247,11 @@ export function EditarCategoriaDialog({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending} className="h-11 w-full gap-2 sm:w-auto">
+              <Button
+                type="submit"
+                disabled={isPending || isUploading}
+                className="h-11 w-full gap-2 sm:w-auto"
+              >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Guardar cambios
               </Button>

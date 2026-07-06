@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MoreVertical, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
 
+import { EntityImage } from "@/components/entity-image";
 import { EmptyState } from "@/components/empty-state";
 import {
   AlertDialog,
@@ -72,9 +73,7 @@ export function ProductosList({ productos, onEditar, onCrear }: ProductosListPro
           <Card key={producto.id} className="border-border/60 bg-card/80">
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 flex-1 items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <UtensilsCrossed className="h-5 w-5 text-muted-foreground" />
-                </div>
+                <EntityImage src={producto.imagenUrl} alt={producto.nombre} size="sm" />
                 <div className="min-w-0">
                   <p className="font-semibold">{producto.nombre}</p>
                   {producto.descripcion && (
@@ -93,7 +92,9 @@ export function ProductosList({ productos, onEditar, onCrear }: ProductosListPro
 
               <div className="flex items-center justify-between gap-2 sm:justify-end">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-lg font-bold text-primary">{formatCOP(producto.precioFinal)}</p>
+                  <p className="text-lg font-bold text-primary">
+                    {formatCOP(producto.precioFinal)}
+                  </p>
                   {producto.esPromocion && <Badge variant="secondary">Promoción</Badge>}
                   {!producto.disponible && <Badge variant="outline">Agotado</Badge>}
                   {!producto.activo && <Badge variant="secondary">Inactivo</Badge>}

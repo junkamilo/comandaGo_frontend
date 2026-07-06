@@ -7,27 +7,52 @@ import { actualizarProducto } from "@/features/productos/api/productos.api";
 import type { EditarProductoFormValues } from "@/features/productos/schemas/producto.schemas";
 import { ApiError } from "@/lib/api-error";
 
-function toRequest(values: EditarProductoFormValues) {
-  return {
+export interface ActualizarProductoPayload {
+  id: number;
+  values: EditarProductoFormValues;
+  imagenUrl?: string | null;
+  imagenEliminada?: boolean;
+}
+
+function toRequest({ values, imagenUrl, imagenEliminada }: Omit<ActualizarProductoPayload, "id">) {
+  const body: {
+    categoriaId: number;
+    nombre: string;
+    descripcion?: string;
+    precio: number;
+    esPromocion: boolean;
+    precioPromocion?: number;
+    imagenUrl?: string;
+    tiempoPreparacionMin?: number;
+    disponible: boolean;
+    orden: number;
+  } = {
     categoriaId: values.categoriaId,
     nombre: values.nombre.trim(),
     descripcion: values.descripcion?.trim() || undefined,
     precio: values.precio,
     esPromocion: values.esPromocion,
     precioPromocion: values.esPromocion ? values.precioPromocion : undefined,
-    imagenUrl: values.imagenUrl?.trim() || undefined,
     tiempoPreparacionMin: values.tiempoPreparacionMin,
     disponible: values.disponible,
     orden: values.orden,
   };
+
+  if (imagenEliminada) {
+    body.imagenUrl = "";
+  } else if (imagenUrl) {
+    body.imagenUrl = imagenUrl;
+  }
+
+  return body;
 }
 
 export function useActualizarProducto(onSuccess?: () => void) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ id, values }: { id: number; values: EditarProductoFormValues }) =>
-      actualizarProducto(id, toRequest(values)),
+    mutationFn: ({ id, ...payload }: ActualizarProductoPayload) =>
+      actualizarProducto(id, toRequest(payload)),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["productos"] });
       toast.success("Producto actualizado", { description: data.nombre });
@@ -42,6 +67,7 @@ export function useActualizarProducto(onSuccess?: () => void) {
 
   return {
     actualizarProducto: mutation.mutate,
+    actualizarProductoAsync: mutation.mutateAsync,
     isPending: mutation.isPending,
     fieldErrors: mutation.error instanceof ApiError ? mutation.error.fieldErrors : undefined,
     reset: mutation.reset,
