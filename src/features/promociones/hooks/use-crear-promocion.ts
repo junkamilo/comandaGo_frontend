@@ -30,6 +30,8 @@ function toRequest({ values }: CrearPromocionPayload): PromocionRequest {
       return { ...base, valorPorcentaje: values.valorPorcentaje };
     case "MONTO_FIJO":
       return { ...base, valorMonto: values.valorMonto };
+    case "PRECIO_FIJO":
+      return { ...base, valorPrecio: values.valorPrecio };
     case "PAGA_X_LLEVA_Y":
       return {
         ...base,

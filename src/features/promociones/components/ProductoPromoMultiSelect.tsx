@@ -30,7 +30,7 @@ export function ProductoPromoMultiSelect({
   disabled,
 }: ProductoPromoMultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const { productos, isLoading } = useProductos({ activo: true, size: 500 });
+  const { productos, isLoading } = useProductos({ activo: true, size: 100 });
 
   const productosActivos = useMemo(() => productos.filter((p) => p.activo), [productos]);
 

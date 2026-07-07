@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { TipoPromocion } from "@/features/promociones/types/promocion.types";
 
-const tipoPromocionSchema = z.enum(["PORCENTAJE", "MONTO_FIJO", "PAGA_X_LLEVA_Y"]);
+const tipoPromocionSchema = z.enum(["PORCENTAJE", "MONTO_FIJO", "PRECIO_FIJO", "PAGA_X_LLEVA_Y"]);
 
 const optionalPositiveInt = z.preprocess(
   (val) => (val === "" || val === undefined || val === null ? undefined : val),
@@ -30,6 +30,7 @@ const basePromocionFields = {
       .optional(),
   ),
   valorMonto: optionalPositiveNumber,
+  valorPrecio: optionalPositiveNumber,
   pagaCantidad: optionalPositiveInt,
   llevaCantidad: optionalPositiveInt,
   fechaInicio: z.string().min(1, "La fecha de inicio es obligatoria"),
@@ -44,6 +45,7 @@ function validarPorTipo(
     tipo: TipoPromocion;
     valorPorcentaje?: number;
     valorMonto?: number;
+    valorPrecio?: number;
     pagaCantidad?: number;
     llevaCantidad?: number;
   },
@@ -63,8 +65,17 @@ function validarPorTipo(
       if (data.valorMonto == null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "El monto es obligatorio",
+          message: "El monto de descuento es obligatorio",
           path: ["valorMonto"],
+        });
+      }
+      break;
+    case "PRECIO_FIJO":
+      if (data.valorPrecio == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "El precio de la promoción es obligatorio",
+          path: ["valorPrecio"],
         });
       }
       break;

@@ -16,7 +16,9 @@ export function formatPromocionResumen(promo: Promocion): string {
     case "PORCENTAJE":
       return promo.valorPorcentaje != null ? `${promo.valorPorcentaje}% dto` : "Porcentaje";
     case "MONTO_FIJO":
-      return promo.valorMonto != null ? `${formatCOP(promo.valorMonto)} dto` : "Monto fijo";
+      return promo.valorMonto != null ? `${formatCOP(promo.valorMonto)} dto` : "Monto de descuento";
+    case "PRECIO_FIJO":
+      return promo.valorPrecio != null ? formatCOP(promo.valorPrecio) : "Precio fijo";
     case "PAGA_X_LLEVA_Y":
       return promo.pagaCantidad != null && promo.llevaCantidad != null
         ? `Paga ${promo.pagaCantidad} lleva ${promo.llevaCantidad}`

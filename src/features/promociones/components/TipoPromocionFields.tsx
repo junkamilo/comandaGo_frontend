@@ -24,6 +24,7 @@ interface TipoPromocionFieldsProps {
 function limpiarCamposTipoAnterior(form: UseFormReturn<PromocionFormValues>, tipo: TipoPromocion) {
   if (tipo !== "PORCENTAJE") form.setValue("valorPorcentaje", undefined);
   if (tipo !== "MONTO_FIJO") form.setValue("valorMonto", undefined);
+  if (tipo !== "PRECIO_FIJO") form.setValue("valorPrecio", undefined);
   if (tipo !== "PAGA_X_LLEVA_Y") {
     form.setValue("pagaCantidad", undefined);
     form.setValue("llevaCantidad", undefined);
@@ -104,11 +105,41 @@ export function TipoPromocionFields({ form }: TipoPromocionFieldsProps) {
                   type="number"
                   min={0}
                   step="0.01"
-                  placeholder="Ej: 5000"
+                  placeholder="Ej: 3000 (se resta del precio)"
                   {...field}
                   value={field.value ?? ""}
                 />
               </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Cantidad en pesos que se descuenta del precio normal del producto.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {tipo === "PRECIO_FIJO" && (
+        <FormField
+          control={form.control}
+          name="valorPrecio"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Precio de la promoción</FormLabel>
+              <FormControl>
+                <Input
+                  className={inputClassName}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Ej: 7000"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Precio final que pagará el cliente por cada unidad en promoción.
+              </p>
               <FormMessage />
             </FormItem>
           )}

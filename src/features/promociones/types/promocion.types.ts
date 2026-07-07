@@ -1,4 +1,4 @@
-export type TipoPromocion = "PORCENTAJE" | "MONTO_FIJO" | "PAGA_X_LLEVA_Y";
+export type TipoPromocion = "PORCENTAJE" | "MONTO_FIJO" | "PRECIO_FIJO" | "PAGA_X_LLEVA_Y";
 
 export interface ProductoPromo {
   id: number;
@@ -14,6 +14,7 @@ export interface Promocion {
   tipo: TipoPromocion;
   valorPorcentaje: number | null;
   valorMonto: number | null;
+  valorPrecio: number | null;
   pagaCantidad: number | null;
   llevaCantidad: number | null;
   fechaInicio: string;
@@ -32,6 +33,7 @@ export interface PromocionRequest {
   tipo: TipoPromocion;
   valorPorcentaje?: number;
   valorMonto?: number;
+  valorPrecio?: number;
   pagaCantidad?: number;
   llevaCantidad?: number;
   fechaInicio: string;
