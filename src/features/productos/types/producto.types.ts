@@ -29,7 +29,6 @@ export interface CrearProductoRequest {
   imagenUrl?: string;
   tiempoPreparacionMin?: number;
   esPromocion?: boolean;
-  orden?: number;
 }
 
 export interface ActualizarProductoRequest {
@@ -42,7 +41,6 @@ export interface ActualizarProductoRequest {
   tiempoPreparacionMin?: number;
   esPromocion?: boolean;
   disponible?: boolean;
-  orden?: number;
 }
 
 export interface ListarProductosParams {

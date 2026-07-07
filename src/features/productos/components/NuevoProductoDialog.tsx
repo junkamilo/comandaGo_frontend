@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 import { ImageUploadButton } from "@/components/image-upload-button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -50,10 +49,7 @@ const defaultValues: CrearProductoFormValues = {
   nombre: "",
   descripcion: "",
   precio: 0,
-  esPromocion: false,
-  precioPromocion: undefined,
   tiempoPreparacionMin: undefined,
-  orden: 0,
 };
 
 export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogProps) {
@@ -67,7 +63,7 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
     defaultValues,
   });
 
-  const esPromocion = form.watch("esPromocion");
+  const nombre = form.watch("nombre");
 
   const {
     crearProductoAsync,
@@ -81,8 +77,6 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
     resetMutation();
   });
 
-  const nombre = form.watch("nombre");
-
   useEffect(() => {
     if (!fieldErrors?.length) return;
     applyFieldErrors(fieldErrors, form.setError, [
@@ -90,10 +84,7 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
       "nombre",
       "descripcion",
       "precio",
-      "esPromocion",
-      "precioPromocion",
       "tiempoPreparacionMin",
-      "orden",
     ]);
   }, [fieldErrors, form]);
 
@@ -104,12 +95,6 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
       resetMutation();
     }
   }, [open, form, resetMutation]);
-
-  useEffect(() => {
-    if (!esPromocion) {
-      form.setValue("precioPromocion", undefined);
-    }
-  }, [esPromocion, form]);
 
   async function onSubmit(values: CrearProductoFormValues) {
     resetMutation();
@@ -196,47 +181,6 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="esPromocion"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-lg border border-border/60 p-3">
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="cursor-pointer">Producto en promoción</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      El precio de promoción debe ser menor al precio normal.
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {esPromocion && (
-              <FormField
-                control={form.control}
-                name="precioPromocion"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Precio de promoción</FormLabel>
-                    <FormControl>
-                      <Input
-                        className={inputClassName}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
             <ImageUploadButton
               value={imagenUrl}
               previewNombre={nombre.trim() || "Producto"}
@@ -252,42 +196,26 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
               }}
             />
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="tiempoPreparacionMin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tiempo prep. (min)</FormLabel>
-                    <FormControl>
-                      <Input
-                        className={inputClassName}
-                        type="number"
-                        min={0}
-                        placeholder="Opcional"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="orden"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Orden</FormLabel>
-                    <FormControl>
-                      <Input className={inputClassName} type="number" min={0} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="tiempoPreparacionMin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tiempo prep. (min)</FormLabel>
+                  <FormControl>
+                    <Input
+                      className={inputClassName}
+                      type="number"
+                      min={0}
+                      placeholder="Opcional"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter className="gap-3 pt-1 sm:gap-2">
               <Button

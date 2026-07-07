@@ -18,11 +18,8 @@ function toRequest({ values, imagenUrl }: CrearProductoPayload) {
     nombre: values.nombre.trim(),
     descripcion: values.descripcion?.trim() || undefined,
     precio: values.precio,
-    esPromocion: values.esPromocion,
-    precioPromocion: values.esPromocion ? values.precioPromocion : undefined,
     imagenUrl: imagenUrl ?? undefined,
     tiempoPreparacionMin: values.tiempoPreparacionMin,
-    orden: values.orden,
   };
 }
 

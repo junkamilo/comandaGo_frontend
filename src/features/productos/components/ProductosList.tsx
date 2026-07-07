@@ -1,9 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { MoreVertical, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { Plus, UtensilsCrossed } from "lucide-react";
 
-import { EntityImage } from "@/components/entity-image";
 import { EmptyState } from "@/components/empty-state";
 import {
   AlertDialog,
@@ -15,36 +29,72 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import type { Categoria } from "@/features/categorias/types/categoria.types";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ProductoSortableItem,
+  ProductoStaticItem,
+} from "@/features/productos/components/ProductoSortableItem";
 import { useEliminarProducto } from "@/features/productos/hooks/use-eliminar-producto";
+import { useReordenarProductos } from "@/features/productos/hooks/use-reordenar-productos";
 import type { Producto } from "@/features/productos/types/producto.types";
-import { formatProductoCategoriaRuta } from "@/features/productos/utils/producto-helpers";
-import { formatCOP } from "@/lib/format-cop";
+import {
+  categoriaContainerId,
+  formatProductoCategoriaRuta,
+  groupProductosPorCategoria,
+  sortCategoriaIdsPorOrden,
+} from "@/features/productos/utils/producto-helpers";
 
 interface ProductosListProps {
   productos: Producto[];
+  categorias: Categoria[];
   onEditar: (producto: Producto) => void;
   onCrear: () => void;
 }
 
-export function ProductosList({ productos, onEditar, onCrear }: ProductosListProps) {
+export function ProductosList({ productos, categorias, onEditar, onCrear }: ProductosListProps) {
   const [eliminarTarget, setEliminarTarget] = useState<Producto | null>(null);
   const { eliminarProducto, isPending: isEliminando } = useEliminarProducto(() =>
     setEliminarTarget(null),
+  );
+  const { reordenarProductosAsync, isReordenando } = useReordenarProductos();
+
+  const grupos = useMemo(() => groupProductosPorCategoria(productos), [productos]);
+  const categoriaIds = useMemo(
+    () => sortCategoriaIdsPorOrden([...grupos.keys()], categorias),
+    [grupos, categorias],
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   function confirmarEliminar() {
     if (!eliminarTarget) return;
     eliminarProducto(eliminarTarget.id);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || isReordenando) return;
+
+    const activeContainer = active.data.current?.sortable?.containerId as string | undefined;
+    const overContainer = over.data.current?.sortable?.containerId as string | undefined;
+    if (!activeContainer || activeContainer !== overContainer) return;
+    if (!activeContainer.startsWith("categoria-")) return;
+
+    const categoriaId = Number(activeContainer.replace("categoria-", ""));
+    const productosEnCategoria = grupos.get(categoriaId) ?? [];
+    const activos = productosEnCategoria.filter((p) => p.activo);
+    const ids = activos.map((p) => p.id);
+    const oldIndex = ids.indexOf(Number(active.id));
+    const newIndex = ids.indexOf(Number(over.id));
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+    await reordenarProductosAsync({
+      ids: arrayMove(ids, oldIndex, newIndex),
+      categoriaId,
+    });
   }
 
   if (productos.length === 0) {
@@ -68,69 +118,56 @@ export function ProductosList({ productos, onEditar, onCrear }: ProductosListPro
 
   return (
     <>
-      <div className="space-y-3 pb-1">
-        {productos.map((producto) => (
-          <Card key={producto.id} className="border-border/60 bg-card/80">
-            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <EntityImage src={producto.imagenUrl} alt={producto.nombre} size="sm" />
-                <div className="min-w-0">
-                  <p className="font-semibold">{producto.nombre}</p>
-                  {producto.descripcion && (
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {producto.descripcion}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatProductoCategoriaRuta(
-                      producto.categoriaNombre,
-                      producto.categoriaPadreNombre,
-                    )}
-                  </p>
-                </div>
-              </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="space-y-6 pb-1">
+          {categoriaIds.map((categoriaId) => {
+            const productosEnCategoria = grupos.get(categoriaId) ?? [];
+            const primerProducto = productosEnCategoria[0];
+            const activosIds = productosEnCategoria.filter((p) => p.activo).map((p) => p.id);
+            const containerId = categoriaContainerId(categoriaId);
 
-              <div className="flex items-center justify-between gap-2 sm:justify-end">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-lg font-bold text-primary">
-                    {formatCOP(producto.precioFinal)}
-                  </p>
-                  {producto.esPromocion && <Badge variant="secondary">Promoción</Badge>}
-                  {!producto.disponible && <Badge variant="outline">Agotado</Badge>}
-                  {!producto.activo && <Badge variant="secondary">Inactivo</Badge>}
-                </div>
+            return (
+              <section key={categoriaId} className="space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  {primerProducto
+                    ? formatProductoCategoriaRuta(
+                        primerProducto.categoriaNombre,
+                        primerProducto.categoriaPadreNombre,
+                      )
+                    : `Categoría ${categoriaId}`}
+                </h3>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">Acciones</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => onEditar(producto)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    {producto.activo && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setEliminarTarget(producto)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar del menú
-                        </DropdownMenuItem>
-                      </>
+                <SortableContext
+                  id={containerId}
+                  items={activosIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    {productosEnCategoria.map((producto) =>
+                      producto.activo ? (
+                        <ProductoSortableItem
+                          key={producto.id}
+                          producto={producto}
+                          sortable
+                          onEditar={onEditar}
+                          onEliminar={setEliminarTarget}
+                        />
+                      ) : (
+                        <ProductoStaticItem
+                          key={producto.id}
+                          producto={producto}
+                          onEditar={onEditar}
+                          onEliminar={setEliminarTarget}
+                        />
+                      ),
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  </div>
+                </SortableContext>
+              </section>
+            );
+          })}
+        </div>
+      </DndContext>
 
       <AlertDialog
         open={eliminarTarget !== null}

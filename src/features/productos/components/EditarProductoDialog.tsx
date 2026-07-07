@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 import { ImageUploadButton } from "@/components/image-upload-button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -64,15 +63,11 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
       nombre: "",
       descripcion: "",
       precio: 0,
-      esPromocion: false,
-      precioPromocion: undefined,
       tiempoPreparacionMin: undefined,
-      orden: 0,
       disponible: true,
     },
   });
 
-  const esPromocion = form.watch("esPromocion");
   const nombre = form.watch("nombre");
 
   const {
@@ -94,10 +89,7 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
       nombre: producto.nombre,
       descripcion: producto.descripcion ?? "",
       precio: producto.precio,
-      esPromocion: producto.esPromocion,
-      precioPromocion: producto.precioPromocion ?? undefined,
       tiempoPreparacionMin: producto.tiempoPreparacionMin ?? undefined,
-      orden: producto.orden,
       disponible: producto.disponible,
     });
   }, [producto, open, form]);
@@ -109,19 +101,10 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
       "nombre",
       "descripcion",
       "precio",
-      "esPromocion",
-      "precioPromocion",
       "tiempoPreparacionMin",
-      "orden",
       "disponible",
     ]);
   }, [fieldErrors, form]);
-
-  useEffect(() => {
-    if (!esPromocion) {
-      form.setValue("precioPromocion", undefined);
-    }
-  }, [esPromocion, form]);
 
   async function onSubmit(values: EditarProductoFormValues) {
     if (!producto) return;
@@ -230,47 +213,6 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="esPromocion"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-lg border border-border/60 p-3">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="cursor-pointer">Producto en promoción</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        El precio de promoción debe ser menor al precio normal.
-                      </p>
-                    </div>
-                  </FormItem>
-                )}
-              />
-
-              {esPromocion && (
-                <FormField
-                  control={form.control}
-                  name="precioPromocion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Precio de promoción</FormLabel>
-                      <FormControl>
-                        <Input
-                          className={inputClassName}
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
               <ImageUploadButton
                 value={imagenEliminada ? null : imagenUrl}
                 previewNombre={nombre.trim() || producto.nombre}
@@ -288,42 +230,26 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
                 }}
               />
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="tiempoPreparacionMin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tiempo prep. (min)</FormLabel>
-                      <FormControl>
-                        <Input
-                          className={inputClassName}
-                          type="number"
-                          min={0}
-                          placeholder="Opcional"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="orden"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Orden</FormLabel>
-                      <FormControl>
-                        <Input className={inputClassName} type="number" min={0} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="tiempoPreparacionMin"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tiempo prep. (min)</FormLabel>
+                    <FormControl>
+                      <Input
+                        className={inputClassName}
+                        type="number"
+                        min={0}
+                        placeholder="Opcional"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

@@ -20,22 +20,16 @@ function toRequest({ values, imagenUrl, imagenEliminada }: Omit<ActualizarProduc
     nombre: string;
     descripcion?: string;
     precio: number;
-    esPromocion: boolean;
-    precioPromocion?: number;
     imagenUrl?: string;
     tiempoPreparacionMin?: number;
     disponible: boolean;
-    orden: number;
   } = {
     categoriaId: values.categoriaId,
     nombre: values.nombre.trim(),
     descripcion: values.descripcion?.trim() || undefined,
     precio: values.precio,
-    esPromocion: values.esPromocion,
-    precioPromocion: values.esPromocion ? values.precioPromocion : undefined,
     tiempoPreparacionMin: values.tiempoPreparacionMin,
     disponible: values.disponible,
-    orden: values.orden,
   };
 
   if (imagenEliminada) {

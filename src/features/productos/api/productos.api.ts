@@ -70,3 +70,10 @@ export async function actualizarDisponibilidadProducto(
   }
   return response.data;
 }
+
+export async function reordenarProductos(body: {
+  ids: number[];
+  categoriaId: number;
+}): Promise<void> {
+  await apiClient.put("/productos/reordenar", body);
+}

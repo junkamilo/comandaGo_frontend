@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EditarProductoDialog } from "@/features/productos/components/EditarProductoDialog";
 import { NuevoProductoDialog } from "@/features/productos/components/NuevoProductoDialog";
 import { ProductosList } from "@/features/productos/components/ProductosList";
+import { useCategorias } from "@/features/categorias/hooks/use-categorias";
 import { useProductos } from "@/features/productos/hooks/use-productos";
 import type { Producto } from "@/features/productos/types/producto.types";
 
@@ -25,6 +26,7 @@ export function ProductosPage() {
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const [editarProducto, setEditarProducto] = useState<Producto | null>(null);
 
+  const { categorias } = useCategorias();
   const { productos, isLoading, isError, refetch } = useProductos();
 
   return (
@@ -51,6 +53,7 @@ export function ProductosPage() {
         {!isLoading && !isError && (
           <ProductosList
             productos={productos}
+            categorias={categorias}
             onEditar={setEditarProducto}
             onCrear={() => setNuevoOpen(true)}
           />
