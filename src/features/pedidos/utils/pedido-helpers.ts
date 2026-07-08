@@ -1,6 +1,15 @@
-import type { EstadoDetalle, ItemCocina, Pedido } from "@/features/pedidos/types/pedido.types";
+import type { DetallePedido, EstadoDetalle, ItemCocina, Pedido } from "@/features/pedidos/types/pedido.types";
 
 export const IMPOCONSUMO = 0.08;
+
+export function detallesActivos(pedido: Pedido): DetallePedido[] {
+  return pedido.detalles.filter((d) => d.estado !== "CANCELADO");
+}
+
+export function todosActivosListos(pedido: Pedido): boolean {
+  const activos = detallesActivos(pedido);
+  return activos.length > 0 && activos.every((d) => d.estado === "LISTO");
+}
 
 export function calcularTotales(subtotal: number) {
   const impuestos = Math.round(subtotal * IMPOCONSUMO * 100) / 100;

@@ -88,16 +88,24 @@ export function PosPage() {
     subtotal: cart.subtotal,
     impuestos: cart.impuestos,
     total: cart.total,
+    productosDisponibles: productos,
+    pedidoActivo: cart.pedidoActivo,
+    puedeCancelarPedidoCompleto: cart.puedeCancelarPedidoCompleto,
     enviando: cart.enviando,
     onMesaChange: cart.setMesaSeleccionada,
     onCambiarCantidad: cart.cambiarCantidad,
     onEliminarItem: cart.eliminarItem,
     onLimpiarCarrito: cart.limpiarCarrito,
     onEnviarACocina: handleEnviarACocina,
+    onCancelarDetalle: cart.cancelarDetalle,
+    onReemplazarDetalle: cart.reemplazarDetalle,
+    onCancelarPedidoActivo: cart.cancelarPedidoActivo,
+    onEntregarDetalle: cart.entregarDetalle,
+    onEntregarPedidoCompleto: cart.entregarPedidoCompleto,
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden pb-16 md:pb-0">
       <PosToolbar itemsCount={cart.itemsCount} />
 
       <PosMobileHeader
@@ -134,7 +142,9 @@ export function PosPage() {
 
       <PosMobileBar
         itemsCount={cart.itemsCount}
-        total={cart.total}
+        totalCarrito={cart.total}
+        totalPedidoActivo={cart.pedidoActivo?.total ?? 0}
+        hasPedidoActivo={Boolean(cart.pedidoActivo)}
         enviando={cart.enviando}
         carritoVacio={cart.carrito.length === 0}
         sinMesas={cart.mesasActivas.length === 0}

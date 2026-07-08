@@ -1,7 +1,25 @@
-import { Minus, Plus, Send, Trash2, UtensilsCrossed } from "lucide-react";
+import { useMemo, useState } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,11 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import type { Mesa } from "@/features/mesas/types/mesa.types";
+import type { Pedido } from "@/features/pedidos/types/pedido.types";
+import { CobroPedidoSheet } from "@/features/pagos/components/CobroPedidoSheet";
 import { estadoMesaClass, estadoMesaLabel } from "@/features/mesas/utils/estado-mesa";
+import { CarritoNuevoSection } from "@/features/pos/components/comanda/CarritoNuevoSection";
+import { ComandaFooterActions } from "@/features/pos/components/comanda/ComandaFooterActions";
+import { PedidoActivoSection } from "@/features/pos/components/comanda/PedidoActivoSection";
 import type { CarritoItem } from "@/features/pos/types/pos.types";
-import { formatCOP } from "@/lib/format-cop";
+import type { Producto } from "@/features/productos/types/producto.types";
 import { cn } from "@/lib/utils";
 
 export interface ComandaContentProps {
@@ -24,14 +46,28 @@ export interface ComandaContentProps {
   subtotal: number;
   impuestos: number;
   total: number;
+  productosDisponibles: Producto[];
+  pedidoActivo: Pedido | null;
+  puedeCancelarPedidoCompleto: boolean;
   enviando: boolean;
   onMesaChange: (id: number) => void;
   onCambiarCantidad: (productoId: number, delta: number) => void;
   onEliminarItem: (productoId: number) => void;
   onLimpiarCarrito: () => void;
   onEnviarACocina: () => void | Promise<void>;
+  onCancelarDetalle: (detalleId: number) => void | Promise<void>;
+  onReemplazarDetalle: (
+    detalleId: number,
+    nuevoProductoId: number,
+    cantidad: number,
+  ) => void | Promise<void>;
+  onCancelarPedidoActivo: () => void | Promise<void>;
+  onEntregarDetalle: (detalleId: number) => void | Promise<void>;
+  onEntregarPedidoCompleto: () => void | Promise<void>;
   showTitle?: boolean;
   showMesaSelector?: boolean;
+  /** En drawer móvil: oculta el footer de comanda nueva si solo hay pedido activo */
+  ocultarFooterCarritoVacio?: boolean;
   className?: string;
 }
 
@@ -43,20 +79,60 @@ export function ComandaContent({
   subtotal,
   impuestos,
   total,
+  productosDisponibles,
+  pedidoActivo,
+  puedeCancelarPedidoCompleto,
   enviando,
   onMesaChange,
   onCambiarCantidad,
   onEliminarItem,
   onLimpiarCarrito,
   onEnviarACocina,
+  onCancelarDetalle,
+  onReemplazarDetalle,
+  onCancelarPedidoActivo,
+  onEntregarDetalle,
+  onEntregarPedidoCompleto,
   showTitle = true,
   showMesaSelector = true,
+  ocultarFooterCarritoVacio = false,
   className,
 }: ComandaContentProps) {
+  const [detalleCancelacionPendiente, setDetalleCancelacionPendiente] = useState<number | null>(
+    null,
+  );
+  const [confirmarCancelarPedido, setConfirmarCancelarPedido] = useState(false);
+  const [cobroAbierto, setCobroAbierto] = useState(false);
+  const [detalleReemplazo, setDetalleReemplazo] = useState<number | null>(null);
+  const [productoReemplazo, setProductoReemplazo] = useState<number | null>(null);
+  const [cantidadReemplazo, setCantidadReemplazo] = useState(1);
+
+  const opcionesProductos = useMemo(
+    () =>
+      productosDisponibles
+        .filter((producto) => producto.activo && producto.disponible)
+        .map((producto) => ({ id: producto.id, nombre: producto.nombre })),
+    [productosDisponibles],
+  );
+
+  function abrirReemplazo(detalleId: number) {
+    setDetalleReemplazo(detalleId);
+    setProductoReemplazo(null);
+    setCantidadReemplazo(1);
+  }
+
+  function confirmarReemplazo() {
+    if (detalleReemplazo == null || productoReemplazo == null || cantidadReemplazo < 1) {
+      return;
+    }
+    void onReemplazarDetalle(detalleReemplazo, productoReemplazo, cantidadReemplazo);
+    setDetalleReemplazo(null);
+  }
+
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+    <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden bg-card/30", className)}>
       {(showTitle || showMesaSelector) && (
-        <div className="border-b border-border/60 p-4">
+        <div className="border-b border-border/60 p-3 md:p-4">
           {showTitle && <h2 className="font-semibold">Comanda</h2>}
           {showMesaSelector && (
             <div className={cn(showTitle && "mt-3")}>
@@ -100,98 +176,170 @@ export function ComandaContent({
         </div>
       )}
 
-      <ScrollArea className="flex-1 p-4">
-        {carrito.length === 0 ? (
-          <div className="flex h-32 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
-            <UtensilsCrossed className="h-8 w-8 opacity-40" />
-            <p className="text-sm">Sin productos en la comanda</p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {carrito.map((item) => (
-              <li
-                key={item.producto.id}
-                className="rounded-lg border border-border/60 bg-background/50 p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.producto.nombre}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCOP(item.producto.precioFinal)} c/u
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => onEliminarItem(item.producto.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => onCambiarCantidad(item.producto.id, -1)}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center text-sm font-medium">{item.cantidad}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => onCambiarCantidad(item.producto.id, 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <span className="text-sm font-semibold">
-                    {formatCOP(item.producto.precioFinal * item.cantidad)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ScrollArea>
-
-      <div className="border-t border-border/60 p-4">
-        <div className="mb-2 space-y-1 text-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span>Subtotal</span>
-            <span>{formatCOP(subtotal)}</span>
-          </div>
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span>Impoconsumo (8%)</span>
-            <span>{formatCOP(impuestos)}</span>
-          </div>
-        </div>
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium">Total</span>
-          <span className="text-xl font-bold">{formatCOP(total)}</span>
-        </div>
-        <Separator className="mb-3" />
-        <div className="flex flex-col gap-2">
-          <Button
-            className="w-full gap-2"
-            size="lg"
-            onClick={() => void onEnviarACocina()}
-            disabled={carrito.length === 0 || mesas.length === 0 || enviando}
-          >
-            <Send className="h-4 w-4" />
-            {enviando ? "Enviando…" : "Enviar a Cocina"}
-          </Button>
-          {carrito.length > 0 && (
-            <Button variant="outline" className="w-full" onClick={onLimpiarCarrito}>
-              Limpiar comanda
-            </Button>
+      <div
+        data-vaul-no-drag
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-y"
+      >
+        <div
+          className={cn(
+            "space-y-4 p-3 md:p-4",
+            ocultarFooterCarritoVacio && carrito.length === 0 && pedidoActivo != null
+              ? "pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+              : "pb-6 md:pb-8",
+          )}
+        >
+          {pedidoActivo && (
+            <PedidoActivoSection
+              pedidoActivo={pedidoActivo}
+              enviando={enviando}
+              puedeCancelarPedidoCompleto={puedeCancelarPedidoCompleto}
+              onSolicitarCancelarDetalle={setDetalleCancelacionPendiente}
+              onSolicitarReemplazoDetalle={abrirReemplazo}
+              onSolicitarCancelarPedido={() => setConfirmarCancelarPedido(true)}
+              onEntregarDetalle={(detalleId) => void onEntregarDetalle(detalleId)}
+              onEntregarPedidoCompleto={() => void onEntregarPedidoCompleto()}
+              onAbrirCobro={() => setCobroAbierto(true)}
+            />
+          )}
+          {!(ocultarFooterCarritoVacio && carrito.length === 0 && pedidoActivo != null) && (
+            <CarritoNuevoSection
+              carrito={carrito}
+              onCambiarCantidad={onCambiarCantidad}
+              onEliminarItem={onEliminarItem}
+            />
           )}
         </div>
       </div>
+
+      {!(ocultarFooterCarritoVacio && carrito.length === 0 && pedidoActivo != null) && (
+        <ComandaFooterActions
+          subtotal={subtotal}
+          impuestos={impuestos}
+          total={total}
+          enviando={enviando}
+          carritoVacio={carrito.length === 0}
+          sinMesas={mesas.length === 0}
+          onEnviarACocina={onEnviarACocina}
+          onLimpiarCarrito={onLimpiarCarrito}
+        />
+      )}
+
+      <AlertDialog
+        open={detalleCancelacionPendiente != null}
+        onOpenChange={(open) => !open && setDetalleCancelacionPendiente(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar este plato?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El ítem se marcará como cancelado y se recalcularán los totales del pedido.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (detalleCancelacionPendiente != null) {
+                  void onCancelarDetalle(detalleCancelacionPendiente);
+                }
+                setDetalleCancelacionPendiente(null);
+              }}
+            >
+              Cancelar ítem
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmarCancelarPedido} onOpenChange={setConfirmarCancelarPedido}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar pedido completo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción cancelará todos los ítems pendientes del pedido activo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                void onCancelarPedidoActivo();
+                setConfirmarCancelarPedido(false);
+              }}
+            >
+              Cancelar pedido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        open={detalleReemplazo != null}
+        onOpenChange={(open) => !open && setDetalleReemplazo(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reemplazar plato</DialogTitle>
+            <DialogDescription>
+              Selecciona el nuevo producto y la cantidad para el reemplazo del ítem pendiente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Nuevo producto</p>
+              <Select
+                value={productoReemplazo != null ? String(productoReemplazo) : undefined}
+                onValueChange={(value) => setProductoReemplazo(Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un producto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {opcionesProductos.map((producto) => (
+                    <SelectItem key={producto.id} value={String(producto.id)}>
+                      {producto.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Cantidad</p>
+              <Input
+                type="number"
+                min={1}
+                value={cantidadReemplazo}
+                onChange={(event) =>
+                  setCantidadReemplazo(Math.max(1, Number(event.target.value) || 1))
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetalleReemplazo(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarReemplazo} disabled={productoReemplazo == null || enviando}>
+              Guardar cambio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {pedidoActivo && (
+        <CobroPedidoSheet
+          open={cobroAbierto}
+          onOpenChange={setCobroAbierto}
+          pedidoId={pedidoActivo.id}
+          numeroPedido={pedidoActivo.numeroPedido}
+          mesaId={mesaSeleccionada}
+        />
+      )}
     </div>
   );
 }

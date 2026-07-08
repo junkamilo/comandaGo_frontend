@@ -66,6 +66,20 @@ export interface DetalleEstadoRequest {
   estado: EstadoDetalle;
 }
 
+export interface CancelarDetallesRequest {
+  detalleIds: number[];
+}
+
+export interface AgregarDetallesRequest {
+  detalles: DetallePedidoItemRequest[];
+}
+
+export interface ReemplazarDetalleRequest {
+  nuevoProductoId: number;
+  cantidad: number;
+  notasPreparacion?: string;
+}
+
 export interface ItemCocina {
   pedidoId: number;
   detalleId: number;

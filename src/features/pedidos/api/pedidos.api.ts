@@ -1,8 +1,11 @@
 import type {
+  AgregarDetallesRequest,
+  CancelarDetallesRequest,
   CrearPedidoRequest,
   DetalleEstadoRequest,
   Pedido,
   PedidoEstadoRequest,
+  ReemplazarDetalleRequest,
 } from "@/features/pedidos/types/pedido.types";
 import { apiClient } from "@/lib/api-client";
 
@@ -71,5 +74,58 @@ export async function actualizarEstadoDetalle(
   body: DetalleEstadoRequest,
 ): Promise<unknown> {
   const response = await apiClient.patch(`/pedidos/${pedidoId}/detalles/${detalleId}/estado`, body);
+  return response.data;
+}
+
+export async function agregarDetallesPedido(
+  pedidoId: number,
+  body: AgregarDetallesRequest,
+): Promise<Pedido> {
+  const response = await apiClient.post<Pedido>(`/pedidos/${pedidoId}/detalles/lote`, body);
+  if (!response.data) {
+    throw new Error("Respuesta de agregar detalles sin datos");
+  }
+  return response.data;
+}
+
+export async function cancelarDetallesPedido(
+  pedidoId: number,
+  body: CancelarDetallesRequest,
+): Promise<Pedido> {
+  const response = await apiClient.patch<Pedido>(`/pedidos/${pedidoId}/cancelar-detalles`, body);
+  if (!response.data) {
+    throw new Error("Respuesta de cancelar detalles sin datos");
+  }
+  return response.data;
+}
+
+export async function reemplazarDetallePedido(
+  pedidoId: number,
+  detalleId: number,
+  body: ReemplazarDetalleRequest,
+): Promise<Pedido> {
+  const response = await apiClient.put<Pedido>(
+    `/pedidos/${pedidoId}/detalles/${detalleId}/reemplazar`,
+    body,
+  );
+  if (!response.data) {
+    throw new Error("Respuesta de reemplazar detalle sin datos");
+  }
+  return response.data;
+}
+
+export async function entregarDetallePedido(
+  pedidoId: number,
+  detalleId: number,
+): Promise<unknown> {
+  const response = await apiClient.patch(`/pedidos/${pedidoId}/detalles/${detalleId}/entregar`);
+  return response.data;
+}
+
+export async function entregarPedidoCompleto(pedidoId: number): Promise<Pedido> {
+  const response = await apiClient.patch<Pedido>(`/pedidos/${pedidoId}/entregar`);
+  if (!response.data) {
+    throw new Error("Respuesta de entrega sin datos");
+  }
   return response.data;
 }
