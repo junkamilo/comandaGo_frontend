@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
@@ -17,6 +18,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -24,10 +26,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useCategorias } from "@/features/categorias/hooks/use-categorias";
+import { obtenerProducto } from "@/features/productos/api/productos.api";
 import { CategoriaHojaSelect } from "@/features/productos/components/CategoriaHojaSelect";
+import { RecetaSelect } from "@/features/productos/components/RecetaSelect";
 import { useActualizarProducto } from "@/features/productos/hooks/use-actualizar-producto";
 import {
   editarProductoSchema,
@@ -56,19 +67,28 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
   const [imagenEliminada, setImagenEliminada] = useState(false);
   const { subirImagen, isUploading } = useUploadImagenProducto();
 
+  const { data: productoDetalle, isLoading: loadingDetalle } = useQuery({
+    queryKey: ["productos", producto?.id, "detalle"],
+    queryFn: () => obtenerProducto(producto!.id),
+    enabled: open && !!producto && !inactivo,
+  });
+
   const form = useForm<EditarProductoFormValues>({
     resolver: zodResolver(editarProductoSchema),
     defaultValues: {
-      categoriaId: 0,
+      categoriaId: null,
       nombre: "",
       descripcion: "",
       precio: 0,
-      tiempoPreparacionMin: undefined,
       disponible: true,
+      tipo: "NORMAL",
+      composicion: [],
+      recetaId: null,
     },
   });
 
   const nombre = form.watch("nombre");
+  const tipo = form.watch("tipo");
 
   const {
     actualizarProductoAsync,
@@ -82,17 +102,20 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
 
   useEffect(() => {
     if (!producto || !open) return;
-    setImagenUrl(producto.imagenUrl);
+    const source = productoDetalle ?? producto;
+    setImagenUrl(source.imagenUrl);
     setImagenEliminada(false);
     form.reset({
-      categoriaId: producto.categoriaId,
-      nombre: producto.nombre,
-      descripcion: producto.descripcion ?? "",
-      precio: producto.precio,
-      tiempoPreparacionMin: producto.tiempoPreparacionMin ?? undefined,
-      disponible: producto.disponible,
+      categoriaId: source.categoriaId,
+      nombre: source.nombre,
+      descripcion: source.descripcion ?? "",
+      precio: source.precio,
+      disponible: source.disponible,
+      tipo: source.tipo ?? "NORMAL",
+      composicion: [],
+      recetaId: source.recetaId ?? null,
     });
-  }, [producto, open, form]);
+  }, [producto, productoDetalle, open, form]);
 
   useEffect(() => {
     if (!fieldErrors?.length) return;
@@ -101,10 +124,18 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
       "nombre",
       "descripcion",
       "precio",
-      "tiempoPreparacionMin",
       "disponible",
+      "tipo",
+      "recetaId",
     ]);
   }, [fieldErrors, form]);
+
+  useEffect(() => {
+    if (tipo !== "COMPUESTO") {
+      form.setValue("composicion", []);
+      form.setValue("recetaId", null);
+    }
+  }, [tipo, form]);
 
   async function onSubmit(values: EditarProductoFormValues) {
     if (!producto) return;
@@ -122,7 +153,11 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] gap-5 overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className="max-h-[90dvh] gap-5 overflow-y-auto sm:max-w-lg"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="space-y-2 pr-6">
           <DialogTitle>Editar producto</DialogTitle>
           <DialogDescription>
@@ -143,23 +178,59 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
               Cerrar
             </Button>
           </DialogFooter>
+        ) : loadingDetalle && !productoDetalle ? (
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className={inputClassName}>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="NORMAL">Normal</SelectItem>
+                        <SelectItem value="COMPUESTO">Compuesto</SelectItem>
+                        <SelectItem value="INSUMO">Insumo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="categoriaId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoría</FormLabel>
+                    <FormLabel>
+                      Categoría{tipo === "INSUMO" ? " (opcional)" : ""}
+                    </FormLabel>
                     <FormControl>
                       <CategoriaHojaSelect
                         categorias={categorias}
                         value={field.value}
                         onValueChange={field.onChange}
-                        disabled={hojas.length === 0}
+                        disabled={tipo !== "INSUMO" && hojas.length === 0}
+                        allowEmpty={tipo === "INSUMO"}
                       />
                     </FormControl>
+                    {tipo === "INSUMO" ? (
+                      <FormDescription>
+                        Sin categoría = solo receta. Con categoría = también se vende (ej.
+                        Porciones).
+                      </FormDescription>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -208,10 +279,37 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
                         {...field}
                       />
                     </FormControl>
+                    {tipo === "INSUMO" && (
+                      <FormDescription>Puede ser 0 si solo se usa en recetas.</FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {tipo === "COMPUESTO" && (
+                <FormField
+                  control={form.control}
+                  name="recetaId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Receta</FormLabel>
+                      <FormControl>
+                        <RecetaSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          disabled={isPending}
+                          enabled={open && tipo === "COMPUESTO"}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        El tiempo de preparación y la personalización en POS vienen de la receta.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <ImageUploadButton
                 value={imagenEliminada ? null : imagenUrl}
@@ -228,27 +326,6 @@ export function EditarProductoDialog({ producto, open, onOpenChange }: EditarPro
                   setImagenUrl(null);
                   setImagenEliminada(true);
                 }}
-              />
-
-              <FormField
-                control={form.control}
-                name="tiempoPreparacionMin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tiempo prep. (min)</FormLabel>
-                    <FormControl>
-                      <Input
-                        className={inputClassName}
-                        type="number"
-                        min={0}
-                        placeholder="Opcional"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
               />
 
               <FormField

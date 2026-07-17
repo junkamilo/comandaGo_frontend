@@ -46,6 +46,10 @@ export interface DetallePedidoItemRequest {
   productoId: number;
   cantidad: number;
   notasPreparacion?: string;
+  precioUnitario?: number;
+  extrasIds?: number[];
+  removidosIds?: number[];
+  cambios?: { desdeProductoId: number; haciaProductoId: number }[];
 }
 
 export interface CrearPedidoRequest {
@@ -89,4 +93,6 @@ export interface ItemCocina {
   cantidad: number;
   estado: EstadoDetalle;
   estadoPedido: EstadoPedido;
+  notasPreparacion: string | null;
+  notasPedido: string | null;
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { actualizarProducto } from "@/features/productos/api/productos.api";
 import type { EditarProductoFormValues } from "@/features/productos/schemas/producto.schemas";
+import type { ActualizarProductoRequest } from "@/features/productos/types/producto.types";
 import { ApiError } from "@/lib/api-error";
 
 export interface ActualizarProductoPayload {
@@ -14,23 +15,31 @@ export interface ActualizarProductoPayload {
   imagenEliminada?: boolean;
 }
 
-function toRequest({ values, imagenUrl, imagenEliminada }: Omit<ActualizarProductoPayload, "id">) {
-  const body: {
-    categoriaId: number;
-    nombre: string;
-    descripcion?: string;
-    precio: number;
-    imagenUrl?: string;
-    tiempoPreparacionMin?: number;
-    disponible: boolean;
-  } = {
-    categoriaId: values.categoriaId,
+function toRequest({
+  values,
+  imagenUrl,
+  imagenEliminada,
+}: Omit<ActualizarProductoPayload, "id">): ActualizarProductoRequest {
+  const sinCategoria =
+    values.tipo === "INSUMO" && (values.categoriaId == null || values.categoriaId <= 0);
+
+  const body: ActualizarProductoRequest = {
     nombre: values.nombre.trim(),
     descripcion: values.descripcion?.trim() || undefined,
     precio: values.precio,
-    tiempoPreparacionMin: values.tiempoPreparacionMin,
     disponible: values.disponible,
+    tipo: values.tipo,
   };
+
+  if (sinCategoria) {
+    body.sinCategoria = true;
+  } else if (values.categoriaId != null && values.categoriaId > 0) {
+    body.categoriaId = values.categoriaId;
+  }
+
+  if (values.tipo === "COMPUESTO" && values.recetaId != null) {
+    body.recetaId = values.recetaId;
+  }
 
   if (imagenEliminada) {
     body.imagenUrl = "";

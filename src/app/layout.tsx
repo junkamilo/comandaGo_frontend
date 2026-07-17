@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className="dark">
-      <body className="min-h-[100dvh] antialiased">
+      <body className="h-full antialiased">
         <NextTopLoader color="#F97316" showSpinner={false} height={3} />
         <Providers>{children}</Providers>
       </body>

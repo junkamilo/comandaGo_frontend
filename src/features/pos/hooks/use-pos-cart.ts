@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import type { Mesa } from "@/features/mesas/types/mesa.types";
-import { cancelarPedido } from "@/features/pedidos/api/pedidos.api";
+import { cancelarPedido, actualizarPedido } from "@/features/pedidos/api/pedidos.api";
 import { PEDIDOS_QUERY_KEYS } from "@/features/pedidos/hooks/pedidos-query-keys";
 import { useAgregarDetallesPedido } from "@/features/pedidos/hooks/use-agregar-detalles-pedido";
 import { useCancelarDetallesPedido } from "@/features/pedidos/hooks/use-cancelar-detalles-pedido";
@@ -19,7 +19,12 @@ import {
   puedeReemplazarDetalle,
 } from "@/features/pedidos/utils/estado-detalle";
 import { calcularTotales } from "@/features/pedidos/utils/pedido-helpers";
-import type { CarritoItem, CategoriaPos } from "@/features/pos/types/pos.types";
+import type {
+  AgregarAlCarritoOptions,
+  CarritoItem,
+  CategoriaPos,
+} from "@/features/pos/types/pos.types";
+import { buildCartKey, precioLineaUnitario } from "@/features/pos/types/pos.types";
 import type { Producto } from "@/features/productos/types/producto.types";
 
 interface UsePosCartOptions {
@@ -33,6 +38,7 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
   const [busqueda, setBusqueda] = useState("");
   const [mesaSeleccionada, setMesaSeleccionada] = useState<number | null>(null);
   const [carrito, setCarrito] = useState<CarritoItem[]>([]);
+  const [notasPedido, setNotasPedido] = useState("");
 
   const mesasActivas = useMemo(() => mesas.filter((m) => m.activo), [mesas]);
 
@@ -53,6 +59,7 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
   const productosFiltrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();
     return productos.filter((p) => {
+      if ((p.tipo ?? "NORMAL") === "INSUMO" && !p.categoriaId) return false;
       const matchCategoria = categoriaEfectiva == null || p.categoriaId === categoriaEfectiva;
       const matchBusqueda =
         !term ||
@@ -63,7 +70,7 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
   }, [productos, categoriaEfectiva, busqueda]);
 
   const subtotal = useMemo(
-    () => carrito.reduce((sum, item) => sum + item.producto.precioFinal * item.cantidad, 0),
+    () => carrito.reduce((sum, item) => sum + precioLineaUnitario(item) * item.cantidad, 0),
     [carrito],
   );
 
@@ -80,9 +87,11 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
 
   const { crearPedidoAsync, isPending: enviando } = useCrearPedido(() => {
     setCarrito([]);
+    setNotasPedido("");
   });
   const { agregarDetallesPedidoAsync, isPending: agregando } = useAgregarDetallesPedido(() => {
     setCarrito([]);
+    setNotasPedido("");
   });
   const { cancelarDetallesPedidoAsync, isPending: cancelandoDetalles } =
     useCancelarDetallesPedido();
@@ -99,39 +108,56 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
     },
   });
 
-  function agregarAlCarrito(producto: Producto) {
+  function agregarAlCarrito(producto: Producto, options?: AgregarAlCarritoOptions) {
+    const notas = options?.notas;
+    const cartKey = buildCartKey(producto.id, notas);
     setCarrito((prev) => {
-      const existente = prev.find((item) => item.producto.id === producto.id);
+      const existente = prev.find((item) => item.cartKey === cartKey);
       if (existente) {
         return prev.map((item) =>
-          item.producto.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item,
+          item.cartKey === cartKey ? { ...item, cantidad: item.cantidad + 1 } : item,
         );
       }
-      return [...prev, { producto, cantidad: 1 }];
+      return [
+        ...prev,
+        {
+          cartKey,
+          producto,
+          cantidad: 1,
+          notas,
+          notasCliente: options?.notasCliente,
+          extrasIds: options?.extrasIds,
+          removidosIds: options?.removidosIds,
+          cambios: options?.cambios,
+          precioUnitario: options?.precioUnitario,
+        },
+      ];
     });
   }
 
-  function cambiarCantidad(productoId: number, delta: number) {
+  function cambiarCantidad(cartKey: string, delta: number) {
     setCarrito((prev) =>
       prev
         .map((item) =>
-          item.producto.id === productoId ? { ...item, cantidad: item.cantidad + delta } : item,
+          item.cartKey === cartKey ? { ...item, cantidad: item.cantidad + delta } : item,
         )
         .filter((item) => item.cantidad > 0),
     );
   }
 
-  function eliminarItem(productoId: number) {
-    setCarrito((prev) => prev.filter((item) => item.producto.id !== productoId));
+  function eliminarItem(cartKey: string) {
+    setCarrito((prev) => prev.filter((item) => item.cartKey !== cartKey));
   }
 
   function limpiarCarrito() {
     setCarrito([]);
+    setNotasPedido("");
   }
 
   function seleccionarMesa(id: number) {
     setMesaSeleccionada(id);
     setCarrito([]);
+    setNotasPedido("");
   }
 
   async function enviarACocina(): Promise<boolean> {
@@ -150,12 +176,26 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
     }
 
     try {
+      const notaPedido = notasPedido.trim() || undefined;
       const detalles = carrito.map((item) => ({
         productoId: item.producto.id,
         cantidad: item.cantidad,
-        notasPreparacion: item.notas,
+        // Solo nota libre: el backend arma CAMBIO/SIN y la concatena.
+        notasPreparacion: item.notasCliente?.trim() || undefined,
+        precioUnitario: item.precioUnitario,
+        extrasIds: item.extrasIds,
+        removidosIds: item.removidosIds,
+        cambios: item.cambios,
       }));
       if (pedidoActivo) {
+        if (notaPedido) {
+          const prev = pedidoActivo.notas?.trim() ?? "";
+          const merged =
+            prev && !prev.includes(notaPedido)
+              ? `${prev} | ${notaPedido}`
+              : prev || notaPedido;
+          await actualizarPedido(pedidoActivo.id, { notas: merged });
+        }
         await agregarDetallesPedidoAsync({
           pedidoId: pedidoActivo.id,
           body: { detalles },
@@ -164,6 +204,7 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
         await crearPedidoAsync({
           origen: "MESA_MESERO",
           mesaId: mesaEfectiva,
+          notas: notaPedido,
           detalles,
         });
       }
@@ -256,6 +297,8 @@ export function usePosCart({ productos, categorias, mesas }: UsePosCartOptions) 
     mesaSeleccionada: mesaEfectiva,
     setMesaSeleccionada: seleccionarMesa,
     carrito,
+    notasPedido,
+    setNotasPedido,
     productosFiltrados,
     categorias,
     mesasActivas,

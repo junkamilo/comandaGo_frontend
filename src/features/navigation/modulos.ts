@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BookOpen,
   CalendarCheck,
   ChefHat,
   ClipboardList,
@@ -35,6 +36,7 @@ const ICONS: Record<string, LucideIcon> = {
   mesas: LayoutGrid,
   recepcion: ConciergeBell,
   productos: UtensilsCrossed,
+  recetas: BookOpen,
   promociones: Tag,
   categorias: FolderTree,
   disponibilidad: CalendarCheck,

@@ -11,6 +11,8 @@ export function agruparMenuDelDia(productos: Producto[]): GrupoMenuDelDia[] {
   const grupos = new Map<number, GrupoMenuDelDia>();
 
   for (const producto of productos) {
+    if (producto.categoriaId == null) continue;
+
     const existente = grupos.get(producto.categoriaId);
     if (existente) {
       existente.productos.push(producto);

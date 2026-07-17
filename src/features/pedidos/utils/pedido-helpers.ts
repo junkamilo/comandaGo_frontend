@@ -11,6 +11,11 @@ export function todosActivosListos(pedido: Pedido): boolean {
   return activos.length > 0 && activos.every((d) => d.estado === "LISTO");
 }
 
+export function todosActivosEntregados(pedido: Pedido): boolean {
+  const activos = detallesActivos(pedido);
+  return activos.length > 0 && activos.every((d) => d.estado === "ENTREGADO");
+}
+
 export function calcularTotales(subtotal: number) {
   const impuestos = Math.round(subtotal * IMPOCONSUMO * 100) / 100;
   return {
@@ -36,6 +41,8 @@ export function pedidosToItemsCocina(pedidos: Pedido[]): ItemCocina[] {
         cantidad: detalle.cantidad,
         estado: detalle.estado,
         estadoPedido: pedido.estado,
+        notasPreparacion: detalle.notasPreparacion,
+        notasPedido: pedido.notas,
       });
     }
   }

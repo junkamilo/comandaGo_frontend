@@ -31,7 +31,7 @@ export function DisponibilidadPage() {
         Marca los productos agotados hoy. Los cambios no eliminan el producto de la carta.
       </p>
 
-      <div className="max-h-[calc(100dvh-8rem)] overflow-y-auto overflow-x-hidden pr-1 md:max-h-[calc(100dvh-9rem)]">
+      <div className="min-w-0">
         {isLoading && <MenuDelDiaSkeleton />}
 
         {isError && (

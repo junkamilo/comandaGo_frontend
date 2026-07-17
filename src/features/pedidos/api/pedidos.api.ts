@@ -17,6 +17,17 @@ export async function crearPedido(body: CrearPedidoRequest): Promise<Pedido> {
   return response.data;
 }
 
+export async function actualizarPedido(
+  id: number,
+  body: { notas?: string },
+): Promise<Pedido> {
+  const response = await apiClient.put<Pedido>(`/pedidos/${id}`, body);
+  if (!response.data) {
+    throw new Error("Respuesta de actualización sin datos");
+  }
+  return response.data;
+}
+
 export async function listarPedidosCocina(): Promise<Pedido[]> {
   const response = await apiClient.get<Pedido[]>("/pedidos/cocina");
   if (!response.data) {

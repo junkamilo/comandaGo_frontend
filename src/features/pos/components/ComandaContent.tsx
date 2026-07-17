@@ -51,8 +51,8 @@ export interface ComandaContentProps {
   puedeCancelarPedidoCompleto: boolean;
   enviando: boolean;
   onMesaChange: (id: number) => void;
-  onCambiarCantidad: (productoId: number, delta: number) => void;
-  onEliminarItem: (productoId: number) => void;
+  onCambiarCantidad: (cartKey: string, delta: number) => void;
+  onEliminarItem: (cartKey: string) => void;
   onLimpiarCarrito: () => void;
   onEnviarACocina: () => void | Promise<void>;
   onCancelarDetalle: (detalleId: number) => void | Promise<void>;
@@ -64,6 +64,8 @@ export interface ComandaContentProps {
   onCancelarPedidoActivo: () => void | Promise<void>;
   onEntregarDetalle: (detalleId: number) => void | Promise<void>;
   onEntregarPedidoCompleto: () => void | Promise<void>;
+  notasPedido: string;
+  onNotasPedidoChange: (value: string) => void;
   showTitle?: boolean;
   showMesaSelector?: boolean;
   /** En drawer móvil: oculta el footer de comanda nueva si solo hay pedido activo */
@@ -93,6 +95,8 @@ export function ComandaContent({
   onCancelarPedidoActivo,
   onEntregarDetalle,
   onEntregarPedidoCompleto,
+  notasPedido,
+  onNotasPedidoChange,
   showTitle = true,
   showMesaSelector = true,
   ocultarFooterCarritoVacio = false,
@@ -219,6 +223,8 @@ export function ComandaContent({
           enviando={enviando}
           carritoVacio={carrito.length === 0}
           sinMesas={mesas.length === 0}
+          notasPedido={notasPedido}
+          onNotasPedidoChange={onNotasPedidoChange}
           onEnviarACocina={onEnviarACocina}
           onLimpiarCarrito={onLimpiarCarrito}
         />

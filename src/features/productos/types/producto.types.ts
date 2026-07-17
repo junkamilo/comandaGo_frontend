@@ -1,9 +1,26 @@
+import type { Receta } from "@/features/recetas/types/receta.types";
 import type { PageResponse } from "@/lib/types/api-response";
+
+export type TipoProducto = "NORMAL" | "COMPUESTO" | "INSUMO";
+
+export type UnidadInsumo = "UND" | "GR" | "ML" | "KG" | "LT" | "PORCION";
+
+export interface ProductoInsumo {
+  id?: number;
+  productoInsumoId: number;
+  nombre?: string;
+  cantidad: number;
+  unidad: UnidadInsumo;
+  esRemovible: boolean;
+  esExtra: boolean;
+  precioExtra: number | null;
+  orden: number;
+}
 
 export interface Producto {
   id: number;
-  categoriaId: number;
-  categoriaNombre: string;
+  categoriaId: number | null;
+  categoriaNombre: string | null;
   categoriaPadreNombre: string | null;
   nombre: string;
   descripcion: string | null;
@@ -16,31 +33,51 @@ export interface Producto {
   disponible: boolean;
   activo: boolean;
   orden: number;
+  tipo: TipoProducto;
+  composicion?: ProductoInsumo[];
+  recetaId?: number | null;
+  recetaNombre?: string | null;
+  receta?: Receta | null;
   fechaCreacion?: string;
   fechaActualizacion?: string;
 }
 
+export interface ProductoInsumoRequest {
+  productoInsumoId: number;
+  cantidad?: number;
+  unidad?: UnidadInsumo;
+  esRemovible?: boolean;
+  esExtra?: boolean;
+  precioExtra?: number | null;
+  orden?: number;
+}
+
 export interface CrearProductoRequest {
-  categoriaId: number;
+  categoriaId?: number | null;
   nombre: string;
   descripcion?: string;
   precio: number;
   precioPromocion?: number;
   imagenUrl?: string;
-  tiempoPreparacionMin?: number;
   esPromocion?: boolean;
+  tipo?: TipoProducto;
+  composicion?: ProductoInsumoRequest[];
+  recetaId?: number | null;
 }
 
 export interface ActualizarProductoRequest {
-  categoriaId?: number;
+  categoriaId?: number | null;
+  sinCategoria?: boolean;
   nombre?: string;
   descripcion?: string;
   precio?: number;
   precioPromocion?: number;
   imagenUrl?: string;
-  tiempoPreparacionMin?: number;
   esPromocion?: boolean;
   disponible?: boolean;
+  tipo?: TipoProducto;
+  composicion?: ProductoInsumoRequest[];
+  recetaId?: number | null;
 }
 
 export interface ListarProductosParams {
@@ -48,6 +85,7 @@ export interface ListarProductosParams {
   activo?: boolean;
   disponible?: boolean;
   esPromocion?: boolean;
+  tipo?: TipoProducto;
   page?: number;
   size?: number;
 }

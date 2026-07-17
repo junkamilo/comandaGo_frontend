@@ -50,7 +50,7 @@ export function MenuDelDiaList({ grupos }: MenuDelDiaListProps) {
 
   if (grupos.length === 0) {
     return (
-      <div className="flex min-h-[calc(100dvh-7rem)] items-center justify-center py-8 md:min-h-[calc(100dvh-8rem)]">
+      <div className="flex items-center justify-center py-12 md:py-16">
         <div className="w-full max-w-lg">
           <EmptyState
             icon={CalendarCheck}

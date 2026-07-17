@@ -38,6 +38,7 @@ import { useEliminarProducto } from "@/features/productos/hooks/use-eliminar-pro
 import { useReordenarProductos } from "@/features/productos/hooks/use-reordenar-productos";
 import type { Producto } from "@/features/productos/types/producto.types";
 import {
+  SIN_CATEGORIA_KEY,
   categoriaContainerId,
   formatProductoCategoriaRuta,
   groupProductosPorCategoria,
@@ -84,6 +85,8 @@ export function ProductosList({ productos, categorias, onEditar, onCrear }: Prod
     if (!activeContainer.startsWith("categoria-")) return;
 
     const categoriaId = Number(activeContainer.replace("categoria-", ""));
+    if (categoriaId === SIN_CATEGORIA_KEY || Number.isNaN(categoriaId)) return;
+
     const productosEnCategoria = grupos.get(categoriaId) ?? [];
     const activos = productosEnCategoria.filter((p) => p.activo);
     const ids = activos.map((p) => p.id);
@@ -99,7 +102,7 @@ export function ProductosList({ productos, categorias, onEditar, onCrear }: Prod
 
   if (productos.length === 0) {
     return (
-      <div className="flex min-h-[calc(100dvh-9rem)] items-center justify-center py-8 md:min-h-[calc(100dvh-10rem)]">
+      <div className="flex items-center justify-center py-12 md:py-16">
         <div className="w-full max-w-lg">
           <EmptyState
             icon={UtensilsCrossed}
@@ -123,46 +126,62 @@ export function ProductosList({ productos, categorias, onEditar, onCrear }: Prod
           {categoriaIds.map((categoriaId) => {
             const productosEnCategoria = grupos.get(categoriaId) ?? [];
             const primerProducto = productosEnCategoria[0];
+            const sinCategoria = categoriaId === SIN_CATEGORIA_KEY;
             const activosIds = productosEnCategoria.filter((p) => p.activo).map((p) => p.id);
             const containerId = categoriaContainerId(categoriaId);
 
             return (
               <section key={categoriaId} className="space-y-3">
                 <h3 className="text-sm font-medium text-muted-foreground">
-                  {primerProducto
-                    ? formatProductoCategoriaRuta(
-                        primerProducto.categoriaNombre,
-                        primerProducto.categoriaPadreNombre,
-                      )
-                    : `Categoría ${categoriaId}`}
+                  {sinCategoria
+                    ? "Sin categoría (uso interno)"
+                    : primerProducto
+                      ? formatProductoCategoriaRuta(
+                          primerProducto.categoriaNombre,
+                          primerProducto.categoriaPadreNombre,
+                        )
+                      : `Categoría ${categoriaId}`}
                 </h3>
 
-                <SortableContext
-                  id={containerId}
-                  items={activosIds}
-                  strategy={verticalListSortingStrategy}
-                >
+                {sinCategoria ? (
                   <div className="space-y-3">
-                    {productosEnCategoria.map((producto) =>
-                      producto.activo ? (
-                        <ProductoSortableItem
-                          key={producto.id}
-                          producto={producto}
-                          sortable
-                          onEditar={onEditar}
-                          onEliminar={setEliminarTarget}
-                        />
-                      ) : (
-                        <ProductoStaticItem
-                          key={producto.id}
-                          producto={producto}
-                          onEditar={onEditar}
-                          onEliminar={setEliminarTarget}
-                        />
-                      ),
-                    )}
+                    {productosEnCategoria.map((producto) => (
+                      <ProductoStaticItem
+                        key={producto.id}
+                        producto={producto}
+                        onEditar={onEditar}
+                        onEliminar={setEliminarTarget}
+                      />
+                    ))}
                   </div>
-                </SortableContext>
+                ) : (
+                  <SortableContext
+                    id={containerId}
+                    items={activosIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {productosEnCategoria.map((producto) =>
+                        producto.activo ? (
+                          <ProductoSortableItem
+                            key={producto.id}
+                            producto={producto}
+                            sortable
+                            onEditar={onEditar}
+                            onEliminar={setEliminarTarget}
+                          />
+                        ) : (
+                          <ProductoStaticItem
+                            key={producto.id}
+                            producto={producto}
+                            onEditar={onEditar}
+                            onEliminar={setEliminarTarget}
+                          />
+                        ),
+                      )}
+                    </div>
+                  </SortableContext>
+                )}
               </section>
             );
           })}

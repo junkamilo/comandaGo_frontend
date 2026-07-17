@@ -54,6 +54,13 @@ export const MODULO_DEFINITIONS: ModuloDefinition[] = [
     roles: ["ADMIN"],
   },
   {
+    id: "recetas",
+    label: "Recetas",
+    href: "/carta/recetas",
+    grupo: "Carta",
+    roles: ["ADMIN"],
+  },
+  {
     id: "promociones",
     label: "Promociones",
     href: "/carta/promociones",

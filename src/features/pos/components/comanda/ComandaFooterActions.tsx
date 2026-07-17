@@ -1,7 +1,9 @@
 import { Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCOP } from "@/lib/format-cop";
 
 interface ComandaFooterActionsProps {
@@ -11,6 +13,8 @@ interface ComandaFooterActionsProps {
   enviando: boolean;
   carritoVacio: boolean;
   sinMesas: boolean;
+  notasPedido: string;
+  onNotasPedidoChange: (value: string) => void;
   onEnviarACocina: () => void | Promise<void>;
   onLimpiarCarrito: () => void;
 }
@@ -22,11 +26,27 @@ export function ComandaFooterActions({
   enviando,
   carritoVacio,
   sinMesas,
+  notasPedido,
+  onNotasPedidoChange,
   onEnviarACocina,
   onLimpiarCarrito,
 }: ComandaFooterActionsProps) {
   return (
     <div className="shrink-0 border-t border-border/60 bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="mb-3 space-y-1.5">
+        <Label htmlFor="notas-pedido" className="text-xs text-muted-foreground">
+          Notas del pedido
+        </Label>
+        <Textarea
+          id="notas-pedido"
+          value={notasPedido}
+          onChange={(e) => onNotasPedidoChange(e.target.value.slice(0, 1000))}
+          placeholder="Ej: alergia a mariscos, servir juntos, sin prisa…"
+          className="min-h-[64px] resize-none text-sm"
+          maxLength={1000}
+        />
+      </div>
+
       <div className="mb-2 space-y-1 text-sm">
         <div className="flex items-center justify-between text-muted-foreground">
           <span>Subtotal</span>

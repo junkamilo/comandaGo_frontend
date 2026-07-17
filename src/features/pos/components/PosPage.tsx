@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CartDrawer } from "@/features/pos/components/CartDrawer";
 import { CartPanel } from "@/features/pos/components/CartPanel";
 import { CategorySidebar } from "@/features/pos/components/CategorySidebar";
+import { PersonalizarProductoSheet } from "@/features/pos/components/PersonalizarProductoSheet";
 import { PosCategoryChips } from "@/features/pos/components/PosCategoryChips";
 import { PosMobileBar } from "@/features/pos/components/PosMobileBar";
 import { PosMobileHeader } from "@/features/pos/components/PosMobileHeader";
@@ -14,13 +15,16 @@ import { PosSkeleton } from "@/features/pos/components/PosSkeleton";
 import { PosToolbar } from "@/features/pos/components/PosToolbar";
 import { ProductGrid } from "@/features/pos/components/ProductGrid";
 import { usePosCart } from "@/features/pos/hooks/use-pos-cart";
+import type { AgregarAlCarritoOptions } from "@/features/pos/types/pos.types";
 import { flattenCategoriasPos } from "@/features/pos/utils/categoria-helpers";
 import { useCategoriasMenu } from "@/features/categorias/hooks/use-categorias-menu";
 import { useMesasPiso } from "@/features/mesas/hooks/use-mesas-piso";
 import { useProductos } from "@/features/productos/hooks/use-productos";
+import type { Producto } from "@/features/productos/types/producto.types";
 
 export function PosPage() {
   const [cartOpen, setCartOpen] = useState(false);
+  const [personalizarProducto, setPersonalizarProducto] = useState<Producto | null>(null);
 
   const {
     productos,
@@ -49,6 +53,18 @@ export function PosPage() {
 
   const isLoading = loadingProductos || loadingCategorias || loadingMesas;
   const isError = errorProductos || errorCategorias || errorMesas;
+
+  function handleAddProducto(producto: Producto) {
+    if ((producto.tipo ?? "NORMAL") === "COMPUESTO") {
+      setPersonalizarProducto(producto);
+      return;
+    }
+    cart.agregarAlCarrito(producto);
+  }
+
+  function handleConfirmPersonalizacion(producto: Producto, options: AgregarAlCarritoOptions) {
+    cart.agregarAlCarrito(producto, options);
+  }
 
   async function handleEnviarACocina() {
     const ok = await cart.enviarACocina();
@@ -88,7 +104,9 @@ export function PosPage() {
     subtotal: cart.subtotal,
     impuestos: cart.impuestos,
     total: cart.total,
-    productosDisponibles: productos,
+    productosDisponibles: productos.filter(
+      (p) => !((p.tipo ?? "NORMAL") === "INSUMO" && !p.categoriaId),
+    ),
     pedidoActivo: cart.pedidoActivo,
     puedeCancelarPedidoCompleto: cart.puedeCancelarPedidoCompleto,
     enviando: cart.enviando,
@@ -102,6 +120,8 @@ export function PosPage() {
     onCancelarPedidoActivo: cart.cancelarPedidoActivo,
     onEntregarDetalle: cart.entregarDetalle,
     onEntregarPedidoCompleto: cart.entregarPedidoCompleto,
+    notasPedido: cart.notasPedido,
+    onNotasPedidoChange: cart.setNotasPedido,
   };
 
   return (
@@ -133,7 +153,7 @@ export function PosPage() {
             busqueda={cart.busqueda}
             productosFiltrados={cart.productosFiltrados}
             onBusquedaChange={cart.setBusqueda}
-            onAdd={cart.agregarAlCarrito}
+            onAdd={handleAddProducto}
           />
         </div>
 
@@ -153,6 +173,13 @@ export function PosPage() {
       />
 
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} {...comandaProps} />
+
+      <PersonalizarProductoSheet
+        producto={personalizarProducto}
+        open={personalizarProducto !== null}
+        onOpenChange={(open) => !open && setPersonalizarProducto(null)}
+        onConfirm={handleConfirmPersonalizacion}
+      />
     </div>
   );
 }

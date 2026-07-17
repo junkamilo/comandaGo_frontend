@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { crearProducto } from "@/features/productos/api/productos.api";
 import type { CrearProductoFormValues } from "@/features/productos/schemas/producto.schemas";
+import type { CrearProductoRequest } from "@/features/productos/types/producto.types";
 import { ApiError } from "@/lib/api-error";
 
 export interface CrearProductoPayload {
@@ -12,15 +13,27 @@ export interface CrearProductoPayload {
   imagenUrl?: string | null;
 }
 
-function toRequest({ values, imagenUrl }: CrearProductoPayload) {
-  return {
-    categoriaId: values.categoriaId,
+function toRequest({ values, imagenUrl }: CrearProductoPayload): CrearProductoRequest {
+  const body: CrearProductoRequest = {
     nombre: values.nombre.trim(),
     descripcion: values.descripcion?.trim() || undefined,
     precio: values.precio,
     imagenUrl: imagenUrl ?? undefined,
-    tiempoPreparacionMin: values.tiempoPreparacionMin,
+    tipo: values.tipo,
   };
+
+  const tieneCategoria = values.categoriaId != null && values.categoriaId > 0;
+  if (tieneCategoria) {
+    body.categoriaId = values.categoriaId;
+  } else if (values.tipo !== "INSUMO") {
+    body.categoriaId = values.categoriaId ?? null;
+  }
+
+  if (values.tipo === "COMPUESTO" && values.recetaId != null) {
+    body.recetaId = values.recetaId;
+  }
+
+  return body;
 }
 
 export function useCrearProducto(onSuccess?: () => void) {

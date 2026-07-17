@@ -54,7 +54,7 @@ export function LoginForm() {
   return (
     <div
       className={cn(
-        "flex min-h-[100dvh] flex-col justify-center bg-background supports-[min-height:100dvh]:min-h-dvh",
+        "flex min-h-full flex-col justify-center bg-background",
         "px-4 py-6 sm:px-6 md:px-8 lg:py-10",
         "pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]",
       )}

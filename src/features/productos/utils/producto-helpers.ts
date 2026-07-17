@@ -1,6 +1,8 @@
 import type { Categoria } from "@/features/categorias/types/categoria.types";
 import type { Producto } from "@/features/productos/types/producto.types";
 
+export const SIN_CATEGORIA_KEY = -1;
+
 export function sortProductosByOrden(productos: Producto[]): Producto[] {
   return [...productos].sort((a, b) => a.orden - b.orden || a.id - b.id);
 }
@@ -9,9 +11,10 @@ export function groupProductosPorCategoria(productos: Producto[]): Map<number, P
   const grouped = new Map<number, Producto[]>();
 
   for (const producto of productos) {
-    const list = grouped.get(producto.categoriaId) ?? [];
+    const key = producto.categoriaId ?? SIN_CATEGORIA_KEY;
+    const list = grouped.get(key) ?? [];
     list.push(producto);
-    grouped.set(producto.categoriaId, list);
+    grouped.set(key, list);
   }
 
   for (const [categoriaId, list] of grouped) {
@@ -30,10 +33,14 @@ export function sortCategoriaIdsPorOrden(
   categorias: Categoria[],
 ): number[] {
   const ordenPorId = new Map(categorias.map((c) => [c.id, c.orden]));
-
-  return [...categoriaIds].sort(
+  const conCategoria = categoriaIds.filter((id) => id !== SIN_CATEGORIA_KEY);
+  const sorted = [...conCategoria].sort(
     (a, b) => (ordenPorId.get(a) ?? 0) - (ordenPorId.get(b) ?? 0) || a - b,
   );
+  if (categoriaIds.includes(SIN_CATEGORIA_KEY)) {
+    sorted.push(SIN_CATEGORIA_KEY);
+  }
+  return sorted;
 }
 
 export function getCategoriasHoja(categorias: Categoria[]): Categoria[] {
@@ -57,9 +64,12 @@ export function formatCategoriaLabel(categoria: Categoria): string {
 }
 
 export function formatProductoCategoriaRuta(
-  categoriaNombre: string,
+  categoriaNombre: string | null,
   categoriaPadreNombre: string | null,
 ): string {
+  if (!categoriaNombre) {
+    return "Sin categoría (uso interno)";
+  }
   if (categoriaPadreNombre) {
     return `${categoriaPadreNombre} › ${categoriaNombre}`;
   }

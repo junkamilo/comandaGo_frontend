@@ -5,6 +5,7 @@ import type {
   Producto,
   ProductosPage,
 } from "@/features/productos/types/producto.types";
+import type { PersonalizacionProducto } from "@/features/pos/types/personalizacion.types";
 import { apiClient } from "@/lib/api-client";
 
 function buildQuery(params: ListarProductosParams): string {
@@ -13,6 +14,7 @@ function buildQuery(params: ListarProductosParams): string {
   if (params.activo !== undefined) search.set("activo", String(params.activo));
   if (params.disponible !== undefined) search.set("disponible", String(params.disponible));
   if (params.esPromocion !== undefined) search.set("esPromocion", String(params.esPromocion));
+  if (params.tipo !== undefined) search.set("tipo", params.tipo);
   search.set("page", String(params.page ?? 0));
   search.set("size", String(params.size ?? 100));
   const qs = search.toString();
@@ -23,6 +25,34 @@ export async function listarProductos(params: ListarProductosParams = {}): Promi
   const response = await apiClient.get<ProductosPage>(`/productos${buildQuery(params)}`);
   if (!response.data) {
     throw new Error("Respuesta de listado sin datos");
+  }
+  return response.data;
+}
+
+export async function obtenerProducto(id: number): Promise<Producto> {
+  const response = await apiClient.get<Producto>(`/productos/${id}`);
+  if (!response.data) {
+    throw new Error("Respuesta de producto sin datos");
+  }
+  return response.data;
+}
+
+export async function obtenerPersonalizacionProducto(
+  id: number,
+): Promise<PersonalizacionProducto> {
+  const response = await apiClient.get<PersonalizacionProducto>(
+    `/productos/${id}/personalizacion`,
+  );
+  if (!response.data) {
+    throw new Error("Respuesta de personalización sin datos");
+  }
+  return response.data;
+}
+
+export async function listarInsumos(): Promise<Producto[]> {
+  const response = await apiClient.get<Producto[]>("/productos/insumos");
+  if (!response.data) {
+    throw new Error("Respuesta de insumos sin datos");
   }
   return response.data;
 }

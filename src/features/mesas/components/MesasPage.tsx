@@ -98,7 +98,7 @@ export function MesasPage() {
         </p>
       )}
 
-      <div className="max-h-[calc(100dvh-10rem)] overflow-y-auto overflow-x-hidden pr-1 md:max-h-[calc(100dvh-11rem)]">
+      <div className="min-w-0">
         {isLoading && <MesasGridSkeleton />}
 
         {isError && (

@@ -101,6 +101,16 @@ export function CocinaPage() {
                           <span className="text-xs text-muted-foreground">x{item.cantidad}</span>
                         </div>
                         <p className="mt-2 font-medium">{item.nombreProducto}</p>
+                        {item.notasPreparacion && (
+                          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                            {item.notasPreparacion}
+                          </p>
+                        )}
+                        {item.notasPedido && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Pedido: {item.notasPedido}
+                          </p>
+                        )}
                         <p className="mt-1 text-xs text-muted-foreground">{item.numeroPedido}</p>
                         {accion && (
                           <Button

@@ -82,7 +82,23 @@ function ProductoRow({ producto, dragHandle, onEditar, onEliminar }: ProductoRow
           {dragHandle}
           <EntityImage src={producto.imagenUrl} alt={producto.nombre} size="sm" />
           <div className="min-w-0">
-            <p className="font-semibold">{producto.nombre}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold">{producto.nombre}</p>
+              {producto.tipo && producto.tipo !== "NORMAL" && (
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {producto.tipo === "COMPUESTO"
+                    ? "Compuesto"
+                    : producto.categoriaId
+                      ? "Insumo vendible"
+                      : "Insumo interno"}
+                </Badge>
+              )}
+              {producto.tipo === "COMPUESTO" && producto.recetaNombre && (
+                <Badge variant="secondary" className="text-[10px]">
+                  {producto.recetaNombre}
+                </Badge>
+              )}
+            </div>
             {producto.descripcion && (
               <p className="line-clamp-2 text-sm text-muted-foreground">{producto.descripcion}</p>
             )}

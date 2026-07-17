@@ -17,15 +17,24 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCategorias } from "@/features/categorias/hooks/use-categorias";
 import { CategoriaHojaSelect } from "@/features/productos/components/CategoriaHojaSelect";
+import { RecetaSelect } from "@/features/productos/components/RecetaSelect";
 import { useCrearProducto } from "@/features/productos/hooks/use-crear-producto";
 import {
   crearProductoSchema,
@@ -45,11 +54,13 @@ interface NuevoProductoDialogProps {
 }
 
 const defaultValues: CrearProductoFormValues = {
-  categoriaId: 0,
+  categoriaId: null,
   nombre: "",
   descripcion: "",
   precio: 0,
-  tiempoPreparacionMin: undefined,
+  tipo: "NORMAL",
+  composicion: [],
+  recetaId: null,
 };
 
 export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogProps) {
@@ -64,6 +75,7 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
   });
 
   const nombre = form.watch("nombre");
+  const tipo = form.watch("tipo");
 
   const {
     crearProductoAsync,
@@ -84,7 +96,8 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
       "nombre",
       "descripcion",
       "precio",
-      "tiempoPreparacionMin",
+      "tipo",
+      "recetaId",
     ]);
   }, [fieldErrors, form]);
 
@@ -96,6 +109,13 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
     }
   }, [open, form, resetMutation]);
 
+  useEffect(() => {
+    if (tipo !== "COMPUESTO") {
+      form.setValue("composicion", []);
+      form.setValue("recetaId", null);
+    }
+  }, [tipo, form]);
+
   async function onSubmit(values: CrearProductoFormValues) {
     resetMutation();
     form.clearErrors();
@@ -104,7 +124,11 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] gap-5 overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className="max-h-[90dvh] gap-5 overflow-y-auto sm:max-w-lg"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="space-y-2 pr-6">
           <DialogTitle>Nuevo producto</DialogTitle>
           <DialogDescription>
@@ -116,18 +140,49 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
+              name="tipo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className={inputClassName}>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="NORMAL">Normal</SelectItem>
+                      <SelectItem value="COMPUESTO">Compuesto</SelectItem>
+                      <SelectItem value="INSUMO">Insumo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="categoriaId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Categoría</FormLabel>
+                  <FormLabel>
+                    Categoría{tipo === "INSUMO" ? " (opcional)" : ""}
+                  </FormLabel>
                   <FormControl>
                     <CategoriaHojaSelect
                       categorias={categorias}
-                      value={field.value || undefined}
+                      value={field.value}
                       onValueChange={field.onChange}
-                      disabled={hojas.length === 0}
+                      disabled={tipo !== "INSUMO" && hojas.length === 0}
+                      allowEmpty={tipo === "INSUMO"}
                     />
                   </FormControl>
+                  {tipo === "INSUMO" ? (
+                    <FormDescription>
+                      Sin categoría = solo receta. Con categoría = también se vende (ej. Porciones).
+                    </FormDescription>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
@@ -176,10 +231,37 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
                       {...field}
                     />
                   </FormControl>
+                  {tipo === "INSUMO" && (
+                    <FormDescription>Puede ser 0 si solo se usa en recetas.</FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {tipo === "COMPUESTO" && (
+              <FormField
+                control={form.control}
+                name="recetaId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Receta</FormLabel>
+                    <FormControl>
+                      <RecetaSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isPending}
+                        enabled={open && tipo === "COMPUESTO"}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      El tiempo de preparación y la personalización en POS vienen de la receta.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <ImageUploadButton
               value={imagenUrl}
@@ -196,27 +278,6 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
               }}
             />
 
-            <FormField
-              control={form.control}
-              name="tiempoPreparacionMin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tiempo prep. (min)</FormLabel>
-                  <FormControl>
-                    <Input
-                      className={inputClassName}
-                      type="number"
-                      min={0}
-                      placeholder="Opcional"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <DialogFooter className="gap-3 pt-1 sm:gap-2">
               <Button
                 type="button"
@@ -228,7 +289,7 @@ export function NuevoProductoDialog({ open, onOpenChange }: NuevoProductoDialogP
               </Button>
               <Button
                 type="submit"
-                disabled={isPending || isUploading || hojas.length === 0}
+                disabled={isPending || isUploading || (tipo !== "INSUMO" && hojas.length === 0)}
                 className="h-11 w-full gap-2 sm:w-auto"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}

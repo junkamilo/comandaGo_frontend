@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-[100dvh] bg-background supports-[min-height:100dvh]:min-h-dvh">
+    <div className="h-full overflow-y-auto bg-background">
       {children}
     </div>
   );

@@ -1,5 +1,6 @@
-import { Search } from "lucide-react";
+import { Search, UtensilsCrossed } from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProductoCard } from "@/features/pos/components/ProductoCard";
@@ -18,6 +19,8 @@ export function ProductGrid({
   onBusquedaChange,
   onAdd,
 }: ProductGridProps) {
+  const hayBusqueda = busqueda.trim().length > 0;
+
   return (
     <main className="flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <div className="shrink-0 border-b border-border/60 p-3 md:p-4">
@@ -32,20 +35,28 @@ export function ProductGrid({
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 p-3 md:p-4">
-        {productosFiltrados.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center gap-1 px-4 text-center text-muted-foreground">
-            <p className="text-sm">No hay productos en esta categoría</p>
-            <p className="text-xs">Prueba otra categoría o ajusta la búsqueda</p>
-          </div>
-        ) : (
+      {productosFiltrados.length === 0 ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center p-3 md:p-4">
+          <EmptyState
+            icon={UtensilsCrossed}
+            title="No hay productos disponibles"
+            description={
+              hayBusqueda
+                ? "Prueba con otro término o limpia la búsqueda."
+                : undefined
+            }
+            className="w-full max-w-md border-0 bg-transparent py-8 hover:bg-transparent"
+          />
+        </div>
+      ) : (
+        <ScrollArea className="min-h-0 flex-1 p-3 md:p-4">
           <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-3">
             {productosFiltrados.map((producto) => (
               <ProductoCard key={producto.id} producto={producto} onAdd={onAdd} />
             ))}
           </div>
-        )}
-      </ScrollArea>
+        </ScrollArea>
+      )}
     </main>
   );
 }

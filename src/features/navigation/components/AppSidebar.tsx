@@ -13,7 +13,7 @@ export function AppSidebar() {
       <div className="border-b border-border/60 py-4">
         <BrandLogo />
       </div>
-      <div className="flex-1 overflow-y-auto px-2 py-4">
+      <div className="flex-1 overflow-y-auto px-2 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {mounted && session ? <NavLinks modulos={[]} grupos={grupos} /> : null}
       </div>
       {mounted && session ? <UserFooter session={session} /> : null}

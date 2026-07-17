@@ -77,7 +77,7 @@ export function EmptyState({
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-11rem)] w-full items-center justify-center px-2 py-6">
+    <div className="flex w-full items-center justify-center px-2 py-12 md:py-16">
       <div className="w-full max-w-lg">{content}</div>
     </div>
   );

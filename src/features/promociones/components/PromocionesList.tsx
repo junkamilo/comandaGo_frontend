@@ -60,7 +60,7 @@ export function PromocionesList({ promociones, onEditar, onCrear }: PromocionesL
 
   if (promociones.length === 0) {
     return (
-      <div className="flex min-h-[calc(100dvh-9rem)] items-center justify-center py-8 md:min-h-[calc(100dvh-10rem)]">
+      <div className="flex items-center justify-center py-12 md:py-16">
         <div className="w-full max-w-lg">
           <EmptyState
             icon={Tag}

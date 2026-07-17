@@ -16,12 +16,16 @@ import {
 } from "@/features/productos/utils/producto-helpers";
 
 const inputClassName = "h-11";
+const SIN_CATEGORIA_VALUE = "__none__";
 
 interface CategoriaHojaSelectProps {
   categorias: Categoria[];
-  value: number | undefined;
-  onValueChange: (value: number) => void;
+  value: number | null | undefined;
+  onValueChange: (value: number | null) => void;
   disabled?: boolean;
+  /** Si true, permite "Sin categoría" (insumos internos). */
+  allowEmpty?: boolean;
+  requiredEmptyLabel?: string;
 }
 
 export function CategoriaHojaSelect({
@@ -29,10 +33,12 @@ export function CategoriaHojaSelect({
   value,
   onValueChange,
   disabled,
+  allowEmpty = false,
+  requiredEmptyLabel = "Sin categoría (solo receta)",
 }: CategoriaHojaSelectProps) {
   const hojas = getCategoriasHoja(categorias);
 
-  if (hojas.length === 0) {
+  if (hojas.length === 0 && !allowEmpty) {
     return (
       <p className="text-sm text-muted-foreground">
         No hay categorías hoja disponibles.{" "}
@@ -46,14 +52,17 @@ export function CategoriaHojaSelect({
 
   return (
     <Select
-      value={value ? String(value) : undefined}
-      onValueChange={(v) => onValueChange(Number(v))}
+      value={value != null && value > 0 ? String(value) : allowEmpty ? SIN_CATEGORIA_VALUE : undefined}
+      onValueChange={(v) => onValueChange(v === SIN_CATEGORIA_VALUE ? null : Number(v))}
       disabled={disabled}
     >
       <SelectTrigger className={inputClassName}>
-        <SelectValue placeholder="Selecciona categoría" />
+        <SelectValue placeholder={allowEmpty ? "Opcional" : "Selecciona categoría"} />
       </SelectTrigger>
       <SelectContent>
+        {allowEmpty && (
+          <SelectItem value={SIN_CATEGORIA_VALUE}>{requiredEmptyLabel}</SelectItem>
+        )}
         {hojas.map((cat) => (
           <SelectItem key={cat.id} value={String(cat.id)}>
             {formatCategoriaLabel(cat)}

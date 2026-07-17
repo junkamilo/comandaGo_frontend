@@ -36,7 +36,7 @@ export function PromocionesPage() {
         </Button>
       </div>
 
-      <div className="max-h-[calc(100dvh-9rem)] overflow-y-auto overflow-x-hidden pr-1 md:max-h-[calc(100dvh-10rem)]">
+      <div className="min-w-0">
         {isLoading && <PromocionesListSkeleton />}
 
         {isError && (

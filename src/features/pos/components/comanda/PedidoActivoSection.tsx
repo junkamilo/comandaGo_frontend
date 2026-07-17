@@ -13,7 +13,7 @@ import {
   puedeEntregarDetalle,
 } from "@/features/pedidos/utils/estado-detalle";
 import { estadoPedidoClass, estadoPedidoLabel } from "@/features/pedidos/utils/estado-pedido";
-import { todosActivosListos } from "@/features/pedidos/utils/pedido-helpers";
+import { todosActivosEntregados, todosActivosListos } from "@/features/pedidos/utils/pedido-helpers";
 import { formatCOP } from "@/lib/format-cop";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,8 @@ export function PedidoActivoSection({
   onAbrirCobro,
 }: PedidoActivoSectionProps) {
   const puedeEntregarPedidoCompleto = todosActivosListos(pedidoActivo);
-  const puedeCobrar = pedidoActivo.estadoPago !== "PAGADO";
+  const puedeCobrar =
+    pedidoActivo.estadoPago !== "PAGADO" && todosActivosEntregados(pedidoActivo);
 
   return (
     <section className="rounded-lg border border-border/60 p-3">
@@ -57,6 +58,12 @@ export function PedidoActivoSection({
         </div>
       </div>
 
+      {pedidoActivo.notas && (
+        <p className="mb-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-800 dark:text-amber-300">
+          Nota pedido: {pedidoActivo.notas}
+        </p>
+      )}
+
       <ul className="space-y-2">
         {pedidoActivo.detalles.map((detalle) => (
           <li
@@ -71,6 +78,11 @@ export function PedidoActivoSection({
                 <p className="text-sm font-medium">
                   {detalle.nombreProducto} x{detalle.cantidad}
                 </p>
+                {detalle.notasPreparacion && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    {detalle.notasPreparacion}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">{formatCOP(detalle.subtotal)}</p>
               </div>
               <Badge className={estadoDetalleClass[detalle.estado]}>

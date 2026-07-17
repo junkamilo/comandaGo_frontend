@@ -13,7 +13,7 @@ export function AppHeader({ children }: AppHeaderProps) {
   const { moduloActivo } = useNavigation();
 
   return (
-    <header className="sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
+    <header className="z-20 flex shrink-0 items-center gap-3 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
       <MobileNav />
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-lg font-semibold tracking-tight">
